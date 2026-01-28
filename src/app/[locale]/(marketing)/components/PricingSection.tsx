@@ -1,7 +1,7 @@
-import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Check, Sparkles, Zap } from "lucide-react";
+import { MarketingButton } from "./MarketingButton";
 
 const PricingSection = () => {
   const plans = [
@@ -102,8 +102,8 @@ const PricingSection = () => {
           {plans.map((plan, index) => (
             <Card 
               key={index}
-              className={`relative border-0 shadow-card hover:shadow-lg transition-all duration-300 ${
-                plan.popular ? 'ring-2 ring-accent scale-[1.02]' : ''
+              className={`relative flex flex-col h-full border-0 shadow-card transition-all duration-300 group ${
+                plan.popular ? 'is-popular' : 'is-regular'
               }`}
             >
               {plan.badge && (
@@ -143,7 +143,7 @@ const PricingSection = () => {
                 <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
               </CardHeader>
 
-              <CardContent className="pt-0">
+              <CardContent className="flex flex-col justify-between grow pt-0">
                 <ul className="space-y-3 mb-6">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-2">
@@ -153,13 +153,13 @@ const PricingSection = () => {
                   ))}
                 </ul>
                 
-                <Button 
-                  variant={plan.variant as "link" | "outline" | "secondary" | "ghost" | "default" | "destructive" | null | undefined}
+                <MarketingButton 
+                  variant={plan.variant}
                   className="w-full"
                   size="lg"
                 >
                   {plan.cta}
-                </Button>
+                </MarketingButton>
               </CardContent>
             </Card>
           ))}

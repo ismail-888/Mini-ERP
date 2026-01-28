@@ -1,10 +1,12 @@
+import styles from "./marketing-theme.module.css";
+
 export default function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className={`${styles.marketingTheme} flex min-h-screen flex-col`}>
       {/* يمكنك وضع الـ Navbar الخاص بالموقع هنا لاحقاً */}
       {/* <Navbar /> */}
       

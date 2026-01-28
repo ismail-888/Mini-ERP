@@ -1,4 +1,4 @@
-import { Button } from "~/components/ui/button";
+import { MarketingButton } from "./MarketingButton";
 import { ArrowRight, Play, CheckCircle2 } from "lucide-react";
 
 const HeroSection = () => {
@@ -59,14 +59,14 @@ const HeroSection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            <Button variant="default" size="lg" className="w-full sm:w-auto">
+            <MarketingButton variant="emerald" size="xl" className="w-full sm:w-auto">
               Start Your Free Trial
               <ArrowRight className="w-5 h-5" />
-            </Button>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto">
+            </MarketingButton>
+            <MarketingButton variant="outline-light" size="xl" className="w-full sm:w-auto">
               <Play className="w-5 h-5" />
               Watch Demo
-            </Button>
+            </MarketingButton>
           </div>
 
           {/* Trust Indicators */}

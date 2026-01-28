@@ -1,0 +1,199 @@
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
+
+/*
+  Scoped "lovable@test" theme for ONLY the (marketing) route group.
+  This intentionally avoids changing global app theme or UI components.
+*/
+
+.marketingTheme {
+  /* Deep Blue & Emerald Green Theme (ported from test/src/index.css) */
+  --background: hsl(210 40% 98%);
+  --foreground: hsl(215 50% 15%);
+
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(215 50% 15%);
+
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(215 50% 15%);
+
+  --primary: hsl(210 55% 25%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  --secondary: hsl(160 84% 39%);
+  --secondary-foreground: hsl(0 0% 100%);
+
+  --muted: hsl(210 30% 95%);
+  --muted-foreground: hsl(215 20% 45%);
+
+  --accent: hsl(160 84% 39%);
+  --accent-foreground: hsl(0 0% 100%);
+
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+
+  --border: hsl(210 30% 88%);
+  --input: hsl(210 30% 88%);
+  --ring: hsl(160 84% 39%);
+
+  --radius: 0.75rem;
+
+  /* Custom tokens */
+  --gradient-hero: linear-gradient(
+    135deg,
+    hsl(210 55% 20%) 0%,
+    hsl(210 55% 30%) 50%,
+    hsl(200 60% 35%) 100%
+  );
+  --gradient-emerald: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(152 76% 45%) 100%);
+  --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 40% 98%) 100%);
+  --shadow-soft: 0 4px 20px -4px hsl(210 55% 25% / 0.15);
+  --shadow-glow: 0 0 40px -10px hsl(160 84% 39% / 0.4);
+  --shadow-card: 0 8px 30px -8px hsl(210 55% 25% / 0.12);
+
+  /* Sidebar (kept for completeness; safe if unused) */
+  --sidebar: hsl(210 55% 20%);
+  --sidebar-foreground: hsl(0 0% 98%);
+  --sidebar-primary: hsl(160 84% 39%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(210 55% 30%);
+  --sidebar-accent-foreground: hsl(0 0% 98%);
+  --sidebar-border: hsl(210 55% 35%);
+  --sidebar-ring: hsl(160 84% 39%);
+
+  /* Base look (scoped) */
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", "Cairo", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* RTL Support (scoped) */
+:global([dir="rtl"] .marketingTheme) {
+  font-family: "Cairo", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Make Tailwind's border-border behave like lovable theme (scoped) */
+.marketingTheme :global(*) {
+  border-color: var(--border);
+}
+
+/* Global utility class names used by the landing page code (scoped definitions) */
+:global(.gradient-hero) {
+  background: var(--gradient-hero);
+}
+
+:global(.gradient-emerald) {
+  background: var(--gradient-emerald);
+}
+
+:global(.gradient-card) {
+  background: var(--gradient-card);
+}
+
+:global(.shadow-soft) {
+  box-shadow: var(--shadow-soft);
+}
+
+:global(.shadow-glow) {
+  box-shadow: var(--shadow-glow);
+}
+
+:global(.shadow-card) {
+  box-shadow: var(--shadow-card);
+}
+
+:global(.group:hover .shadow-card-hover) {
+  box-shadow: var(--shadow-soft);
+}
+
+:global(.group:hover .ring-2.ring-accent) {
+  box-shadow: 0 0 0 2px var(--accent); /* Re-apply ring as box-shadow for hover */
+}
+
+/* Popular card – clean green outline only */
+.marketingTheme :global(.is-popular) {
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.marketingTheme :global(.is-popular:hover) {
+  box-shadow:
+    var(--shadow-card),
+    0 0 0 2px hsl(160 84% 39%);
+    transform: translateY(-2px);
+}
+
+/* Regular card – bottom shadow only on hover */
+.marketingTheme :global(.is-regular) {
+  box-shadow: none; /* no shadow by default */
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.marketingTheme :global(.is-regular:hover) {
+  box-shadow: 0 18px 30px -18px hsl(210 55% 25% / 0.25);
+  transform: translateY(-2px);
+}
+
+:global(.text-gradient) {
+  background: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(152 76% 50%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+:global(.animate-float) {
+  animation: marketing-float 6s ease-in-out infinite;
+}
+
+:global(.animate-pulse-soft) {
+  animation: marketing-pulse-soft 3s ease-in-out infinite;
+}
+
+:global(.animate-slide-up) {
+  animation: marketing-slide-up 0.6s ease-out;
+}
+
+:global(.animate-fade-in) {
+  animation: marketing-fade-in 0.8s ease-out;
+}
+
+@keyframes marketing-float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes marketing-pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes marketing-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes marketing-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from "react";
-import { Button } from "~/components/ui/button";
+import { MarketingButton } from "./MarketingButton";
 import { Menu, X } from "lucide-react";
 
 const Navbar = () => {
@@ -42,12 +42,12 @@ const Navbar = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm">
+            <MarketingButton variant="ghost" size="sm">
               Login
-            </Button>
-            <Button variant="default" size="sm">
+            </MarketingButton>
+            <MarketingButton variant="emerald" size="sm">
               Start Free Trial
-            </Button>
+            </MarketingButton>
           </div>
 
           {/* Mobile Menu Button */}
@@ -74,12 +74,12 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <Button variant="ghost" className="w-full justify-center">
+                <MarketingButton variant="ghost" className="w-full justify-center">
                   Login
-                </Button>
-                <Button variant="default" className="w-full justify-center">
+                </MarketingButton>
+                <MarketingButton variant="emerald" className="w-full justify-center">
                   Start Free Trial
-                </Button>
+                </MarketingButton>
               </div>
             </div>
           </div>
