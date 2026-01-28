@@ -1,0 +1,144 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+// --- الترقيمات (Enums) ---
+
+enum Role {
+    ADMIN      // أنت (مدير النظام)
+    SHOP_OWNER // صاحب المحل
+}
+
+enum Plan {
+    FREE_TRIAL    // تجربة 7 أيام
+    MONTHLY       // شهر واحد
+    SIX_MONTHS    // 6 أشهر
+    ANNUAL        // سنة (12 شهر)
+}
+
+// --- جداول "موصاحب" (Inventory & POS) ---
+
+model Product {
+    id              String   @id @default(cuid())
+    name            String
+    barcode         String?  @unique
+    image           String?
+    category        String?
+    brand           String?
+    
+    // إدارة الأموال بالدولار
+    costPriceUSD    Float    @default(0)
+    salePriceUSD    Float    @default(0)
+    
+    // إدارة المخزون
+    currentStock    Int      @default(0)
+    minStockAlert   Int      @default(5)
+    expiryDate      DateTime?
+
+    // ربط المنتج بصاحب المحل
+    userId          String
+    user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    sales           SaleItem[]
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+}
+
+model Sale {
+    id              String   @id @default(cuid())
+    totalUSD        Float
+    totalLBP        Float
+    exchangeRate    Float    // سعر الصرف وقت هذه البيعة
+    
+    // تفاصيل الدفع (للزبون اللي بيدفع شقفة دولار وشقفة لبناني)
+    paidCashUSD     Float    @default(0)
+    paidCashLBP     Float    @default(0)
+    paidCardUSD     Float    @default(0)
+    
+    // ربط البيعة بالمحل
+    userId          String
+    user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    items           SaleItem[]
+    createdAt       DateTime @default(now())
+}
+
+model SaleItem {
+    id        String  @id @default(cuid())
+    saleId    String
+    productId String
+    quantity  Int
+    priceUSD  Float   // السعر الذي تم البيع به (لحفظ التاريخ)
+    
+    sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+    product   Product @relation(fields: [productId], references: [id])
+}
+
+// --- جداول المستخدمين والأمان (NextAuth + SaaS) ---
+
+model User {
+    id            String    @id @default(cuid())
+    name          String?
+    email         String?   @unique
+    emailVerified DateTime?
+    image         String?
+    
+    // إعدادات الحساب والصلاحيات
+    role          Role      @default(SHOP_OWNER)
+    plan          Plan      @default(FREE_TRIAL)
+    isActive      Boolean   @default(true)
+    
+    // تواريخ الاشتراك
+    trialEndsAt        DateTime  @default(dbgenerated("NOW() + interval '7 days'"))
+    subscriptionEndsAt DateTime?
+
+    // العلاقات
+    accounts      Account[]
+    sessions      Session[]
+    products      Product[]
+    sales         Sale[]
+}
+
+model Account {
+    id                       String  @id @default(cuid())
+    userId                   String
+    type                     String
+    provider                 String
+    providerAccountId        String
+    refresh_token            String? // @db.Text
+    access_token             String? // @db.Text
+    expires_at               Int?
+    token_type               String?
+    scope                    String?
+    id_token                 String? // @db.Text
+    session_state            String?
+    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    refresh_token_expires_in Int?
+
+    @@unique([provider, providerAccountId])
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
