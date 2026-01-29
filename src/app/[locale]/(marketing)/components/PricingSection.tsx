@@ -81,7 +81,7 @@ const PricingSection = () => {
   ];
 
   return (
-    <section id="pricing" className="py-24 bg-muted/30">
+    <section id="pricing" className="py-10 bg-muted/30">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -90,7 +90,7 @@ const PricingSection = () => {
           </Badge>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
             Simple, Transparent
-            <span className="text-gradient block mt-2">Pricing</span>
+            <span className="text-gradient block mt-2 py-1">Pricing</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Start free, scale as you grow. No hidden fees, no surprises.
@@ -166,11 +166,11 @@ const PricingSection = () => {
         </div>
 
         {/* Trust Statement */}
-        <div className="text-center mt-12">
+        {/* <div className="text-center mt-12">
           <p className="text-sm text-muted-foreground">
             All plans include SSL encryption, automatic backups, and 99.9% uptime guarantee.
           </p>
-        </div>
+        </div> */}
       </div>
     </section>
   );

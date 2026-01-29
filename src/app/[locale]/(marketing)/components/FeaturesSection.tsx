@@ -56,11 +56,11 @@ import {
     ];
   
     return (
-      <section id="features" className="py-24 bg-background">
+      <section id="features" className="py-10 bg-background">
         <div className="container mx-auto px-4">
           {/* Section Header */}
           <div className="text-center mb-16">
-            <Badge variant="outline" className="mb-4 px-4 py-1 border-accent text-accent">
+            <Badge variant="outline" className="mb-4 px-4 py-1  border-accent text-accent">
               Features
             </Badge>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
