@@ -28,11 +28,11 @@ export default function AdminSettingsPage() {
           <CardContent className="space-y-6">
             <div className="grid gap-2">
               <label htmlFor="platform-name">Platform Name</label>
-              <Input id="platform-name" defaultValue="Mousahib" />
+              <Input id="platform-name" defaultValue="Mousaheb" />
             </div>
             <div className="grid gap-2">
               <label htmlFor="support-email">Support Email</label>
-              <Input id="support-email" type="email" defaultValue="support@mousahib.com" />
+              <Input id="support-email" type="email" defaultValue="support@mousaheb.com" />
             </div>
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">

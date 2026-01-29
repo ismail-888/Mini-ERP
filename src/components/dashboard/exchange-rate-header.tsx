@@ -1,9 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { RefreshCw, DollarSign } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { Button } from "~/components/ui/button"
-import { ThemeToggle } from "~/components/theme-toggle"
 import {
   Dialog,
   DialogContent,
@@ -32,65 +31,56 @@ export function ExchangeRateHeader() {
   const formattedRate = new Intl.NumberFormat("en-US").format(rate.usdToLBP)
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-card/95 backdrop-blur-lg">
-      <div className="flex h-14 items-center justify-between px-4 lg:px-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <DollarSign className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="hidden sm:block">
-            <h1 className="text-lg font-bold text-foreground">Mousahib</h1>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col items-end">
-            <span className="text-xs text-muted-foreground">Daily Rate</span>
-            <span className="text-sm font-semibold text-foreground">
-              $1 = {formattedRate} LBP
-            </span>
-          </div>
-
-          <ThemeToggle />
-
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                <RefreshCw className="h-4 w-4" />
-                <span className="hidden sm:inline">Update</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Update Exchange Rate</DialogTitle>
-                <DialogDescription>
-                  Set the current USD to LBP exchange rate for accurate pricing.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <label htmlFor="rate" className="text-sm font-medium text-muted-foreground">
-                    USD to LBP
-                  </label>
-                  <Input
-                    id="rate"
-                    type="text"
-                    value={newRate}
-                    onChange={(e) => setNewRate(e.target.value)}
-                    placeholder="89,500"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave}>Save Rate</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+    <div className="flex items-center gap-3">
+      {/* عرض السعر بشكل نظيف */}
+      <div className="flex flex-col items-end leading-tight">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Daily Rate</span>
+        <span className="text-sm font-bold text-foreground tabular-nums">
+          $1 = {formattedRate} <span className="text-[10px] text-muted-foreground">LBP</span>
+        </span>
       </div>
-    </header>
+
+      {/* حوار التحديث */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8 rounded-full border-dashed hover:border-primary hover:text-primary transition-all"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Exchange Rate</DialogTitle>
+            <DialogDescription>
+              Set the current USD to LBP exchange rate for accurate pricing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label htmlFor="rate">Exchange Rate (LBP per $1 USD)</label>
+              <Input
+                id="rate"
+                type="text"
+                value={newRate}
+                onChange={(e) => setNewRate(e.target.value)}
+                placeholder="89,500"
+                className="font-mono"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} className="bg-primary text-primary-foreground">
+              Save Rate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

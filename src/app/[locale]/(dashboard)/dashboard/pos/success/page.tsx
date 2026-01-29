@@ -26,7 +26,7 @@ export default function SuccessPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem-5rem)] flex-col items-center justify-center px-4 py-8 lg:min-h-[calc(100vh-3.5rem)]">
+    <div className="flex min-h-[calc(100vh-3.5rem-5rem)] flex-col items-center justify-center  lg:min-h-[calc(100vh-3.5rem)]">
       <div className="w-full max-w-md">
         {/* Success Icon */}
         <div className="mb-8 flex flex-col items-center text-center">

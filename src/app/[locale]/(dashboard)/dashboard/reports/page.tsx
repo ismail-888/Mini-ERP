@@ -30,7 +30,7 @@ export default function ReportsPage() {
   const growthRate = 12.5
 
   return (
-    <div className="px-4 py-6 lg:px-8">
+    <div className="">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Reports</h1>

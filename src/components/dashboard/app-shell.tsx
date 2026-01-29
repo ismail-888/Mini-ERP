@@ -1,41 +1,36 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { usePathname } from "next/navigation"
-// الـ Providers المهمة جداً للحسابات والسلة
+import { SidebarProvider, SidebarInset } from "~/components/ui/sidebar"
+import { AppSidebar } from "./app-sidebar"
+import { TopBar } from "./top-bar"
+import { BottomNavigation } from "./bottom-navigation"
 import { ExchangeRateProvider } from "~/contexts/exchange-rate-context"
 import { CartProvider } from "~/contexts/cart-context"
-// المكونات التي تجعل الواجهة تعمل
-import { ExchangeRateHeader } from "~/components/dashboard/exchange-rate-header"
-import { BottomNavigation } from "~/components/dashboard/bottom-navigation"
-import { DesktopSidebar } from "~/components/dashboard/desktop-sidebar"
-import { cn } from "~/lib/utils"
 
-interface AppShellProps {
-  children: ReactNode;
-  role: "admin" | "merchant";
-}
-
-export function AppShell({ children, role }: AppShellProps) {
-
+export function AppShell({ children, role }: { children: ReactNode; role: "admin" | "merchant" }) {
   return (
     <ExchangeRateProvider>
       <CartProvider>
-        <DesktopSidebar role={role} />
-        
-        <div className={cn("flex h-screen flex-col transition-all duration-300 lg:ml-64", role === "merchant" && "pt-14")}>
-          {role === "merchant" && <ExchangeRateHeader />}
-          <main
-            className={cn(
-              "min-h-screen pb-20 lg:pb-0"
-            )}
-          >
-            <div className="p-4 lg:p-8">
+        <SidebarProvider>
+          {/* السايدبار يحتوي على عنوان "Mousaheb" في الهيدر الخاص به */}
+          <AppSidebar role={role} />
+          
+          <SidebarInset className="flex flex-col min-h-screen">
+            <TopBar role={role} />
+            
+            <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6">
               {children}
-            </div>
-          </main>
-          {role === "merchant" && <BottomNavigation />}
-        </div>
+            </main>
+
+            {/* تظهر فقط في الشاشات الصغيرة للمارشانت */}
+            {role === "merchant" && (
+              <div className="lg:hidden">
+                <BottomNavigation />
+              </div>
+            )}
+          </SidebarInset>
+        </SidebarProvider>
       </CartProvider>
     </ExchangeRateProvider>
   )
