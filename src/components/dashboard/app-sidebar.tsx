@@ -42,7 +42,7 @@ export function AppSidebar({
           { title: "Settings", url: "/admin/settings", icon: Settings },
         ]
       : [
-          { title: "Dashboard", url: "/dashboard", icon: Home },
+          { title: t("dashboard"), url: "/dashboard", icon: Home },
           { title: "Point of Sale", url: "/dashboard/pos", icon: ShoppingCart },
           { title: "Inventory", url: "/dashboard/inventory", icon: Package },
           { title: "Reports", url: "/dashboard/reports", icon: BarChart3 },
