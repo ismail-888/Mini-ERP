@@ -31,13 +31,21 @@ export function ExchangeRateHeader() {
   const formattedRate = new Intl.NumberFormat("en-US").format(rate.usdToLBP)
 
   return (
-    <div className="flex items-center gap-3">
-      {/* عرض السعر بشكل نظيف */}
+    <div className="flex items-center gap-1.5 sm:gap-3">
+      {/* عرض السعر بشكل متجاوب */}
       <div className="flex flex-col items-end leading-tight">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Daily Rate</span>
-        <span className="text-sm font-bold text-foreground tabular-nums">
-          $1 = {formattedRate} <span className="text-[10px] text-muted-foreground">LBP</span>
+        {/* يختفي في الجوال ويظهر في sm فأكبر */}
+        <span className="hidden sm:block text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+          Daily Rate
         </span>
+        
+        <div className="flex items-center gap-1 text-sm font-bold text-foreground tabular-nums">
+          {/* نص مختصر جداً للجوال: 1$ = 89k */}
+          <span className="sm:hidden text-primary">$</span>
+          <span className="hidden sm:inline">$1 =</span>
+          <span>{formattedRate}</span>
+          <span className="text-[10px] text-muted-foreground font-normal">LBP</span>
+        </div>
       </div>
 
       {/* حوار التحديث */}
@@ -46,13 +54,13 @@ export function ExchangeRateHeader() {
           <Button 
             variant="outline" 
             size="icon" 
-            className="h-8 w-8 rounded-full border-dashed hover:border-primary hover:text-primary transition-all"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-full border-dashed hover:border-primary hover:text-primary transition-all shrink-0"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="w-[95vw] max-w-md rounded-lg">
+          <DialogHeader className="text-start">
             <DialogTitle>Update Exchange Rate</DialogTitle>
             <DialogDescription>
               Set the current USD to LBP exchange rate for accurate pricing.
@@ -60,10 +68,13 @@ export function ExchangeRateHeader() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <label htmlFor="rate">Exchange Rate (LBP per $1 USD)</label>
+              <label htmlFor="rate" className="text-sm font-medium">
+                Exchange Rate (LBP per $1 USD)
+              </label>
               <Input
                 id="rate"
                 type="text"
+                inputMode="decimal" // لإظهار لوحة أرقام في الجوال
                 value={newRate}
                 onChange={(e) => setNewRate(e.target.value)}
                 placeholder="89,500"
@@ -71,11 +82,11 @@ export function ExchangeRateHeader() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
+          <DialogFooter className="flex-row gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none">
               Cancel
             </Button>
-            <Button onClick={handleSave} className="bg-primary text-primary-foreground">
+            <Button onClick={handleSave} className="flex-1 sm:flex-none bg-primary text-primary-foreground">
               Save Rate
             </Button>
           </DialogFooter>

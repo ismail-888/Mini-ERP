@@ -29,7 +29,7 @@ const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+const SIDEBAR_WIDTH_ICON = "4.5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContextProps = {
@@ -193,7 +193,8 @@ function Sidebar({
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
-          side={side}
+          // هذا السطر يكتشف اتجاه الصفحة ويقلب الجهة تلقائياً في الجوال
+          side={typeof window !== 'undefined' && document.documentElement.dir === "rtl" ? (side === "left" ? "right" : "left") : side}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
@@ -215,7 +216,7 @@ function Sidebar({
       data-slot="sidebar"
     >
       {/* This is what handles the sidebar gap on desktop */}
-      <div
+      {/* <div
         data-slot="sidebar-gap"
         className={cn(
           "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
@@ -225,22 +226,27 @@ function Sidebar({
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
         )}
-      />
+      /> */}
       <div
-        data-slot="sidebar-container"
-        className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
-          side === "left"
-            ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-            : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
-          // Adjust the padding for floating and inset variants.
-          variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
-          className
-        )}
-        {...props}
-      >
+  data-slot="sidebar-container"
+  className={cn(
+    "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width,margin] duration-200 ease-linear md:flex",
+    "inset-inline-start-0", // يضمن الالتصاق بالبداية (يمين في AR، يسار في EN)
+    
+    // التعديل الجوهري هنا:
+    // إذا كان collapsed و offcanvas فقط نقوم بالإخفاء التام
+    "group-data-[collapsible=offcanvas]:-ms-(--sidebar-width)",
+    
+    // إذا كان collapsed و icon، لا نحتاج لسحب السايدبار بالـ margin لأن العرض (width) سيتغير تلقائياً
+    "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+
+    variant === "floating" || variant === "inset"
+      ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
+      : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-e group-data-[side=right]:border-s", // استخدام border-e و border-s
+    className
+  )}
+  {...props}
+>
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
@@ -286,17 +292,13 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
-      tabIndex={-1}
-      onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      // ... props الأخرى
       className={cn(
-        "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
+        "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:inline-start-1/2 after:w-[2px] sm:flex",
+        // التعديل: نستخدم inline-end ليكون دائماً في "نهاية" السايدبار بغض النظر عن اللغة
+        "inline-end-0", 
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
-        "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-        "hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
-        "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-        "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+        // ... باقي الكلاسات
         className
       )}
       {...props}
@@ -309,8 +311,12 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
     <main
       data-slot="sidebar-inset"
       className={cn(
-        "bg-background relative flex w-full flex-1 flex-col",
-        "md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
+        "bg-background relative flex min-h-svh w-full flex-1 flex-col",
+        // المسافة البادئة تعتمد على حالة السايدبار (Expanded vs Collapsed)
+        "md:peer-data-[state=expanded]:ms-(--sidebar-width)",
+        "md:peer-data-[state=collapsed]:ms-(--sidebar-width-icon)",
+        // في حالة offcanvas تكون المسافة 0
+        "md:peer-data-[collapsible=offcanvas]:ms-0",
         className
       )}
       {...props}

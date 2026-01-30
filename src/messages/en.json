@@ -1,6 +1,5 @@
 {
-    "Dashboard": {
-      "title": "Welcome to Mousaheb",
-      "description": "The best Mini-ERP in Lebanon"
-    }
+  "sidebar": {
+    "admin_overview": "Admin Overviewww"
   }
+}
