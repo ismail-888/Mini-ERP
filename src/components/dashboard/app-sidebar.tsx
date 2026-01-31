@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 
-import { usePathname } from "next/navigation";
+import { usePathname } from "~/i18n/routing";
 import {
   Home,
   ShoppingCart,
@@ -38,7 +38,7 @@ export function AppSidebar({
     role === "admin"
       ? [
           { title: t("admin_overview"), url: "/admin", icon: ShieldCheck },
-          { title: "Shops", url: "/admin/shops", icon: Home },
+          { title: "Active Shops", url: "/admin/shops", icon: Home },
           { title: "Settings", url: "/admin/settings", icon: Settings },
         ]
       : [
@@ -61,7 +61,7 @@ export function AppSidebar({
               <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20 text-primary-foreground">
                 <span className="font-black text-lg">M</span>
               </div>
-              <div className="flex flex-col gap-0.5 leading-none px-2 group-data-[collapsible=icon]:hidden italic">
+              <div className="flex flex-col gap-0.5 leading-none px-2 group-data-[collapsible=icon]:hidden ">
                 <span className="text-sm font-bold tracking-tight uppercase">Mousaheb</span>
                 <span className="text-[10px] font-medium text-muted-foreground/70">v1.0.0</span>
               </div>
@@ -74,7 +74,11 @@ export function AppSidebar({
       <SidebarContent className="bg-sidebar mt-4 overflow-x-hidden">
         <SidebarMenu className="px-2 gap-1.5">
           {navItems.map((item) => {
-            const isActive = pathname === item.url || pathname.startsWith(`${item.url}/`);
+            // Section roots (/admin, /dashboard) active only on exact match; others also on sub-routes
+            const isSectionRoot = item.url === "/admin" || item.url === "/dashboard";
+            const isActive = isSectionRoot
+              ? pathname === item.url
+              : pathname === item.url || pathname.startsWith(`${item.url}/`);
 
             return (
               <SidebarMenuItem key={item.title}>

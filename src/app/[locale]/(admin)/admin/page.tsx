@@ -14,7 +14,7 @@ export default function AdminDashboardPage() {
   const recentShops = mockShops.slice(0, 3)
 
   return (
-    <div className="px-4 py-6 lg:px-8">
+    <div className="">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground lg:text-3xl">

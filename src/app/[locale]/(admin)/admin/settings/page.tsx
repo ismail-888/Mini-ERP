@@ -7,7 +7,7 @@ import { Switch } from "~/components/ui/switch"
 
 export default function AdminSettingsPage() {
   return (
-    <div className="px-4 py-6 lg:px-8">
+    <div className="">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">Settings</h1>

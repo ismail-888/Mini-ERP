@@ -5,7 +5,7 @@ import { ThemeToggle } from "~/components/theme-toggle"
 import { LanguageSwitcher } from "./language-switcher"
 import { ExchangeRateHeader } from "./exchange-rate-header"
 import { usePathname } from "next/navigation"
-import { cn } from "~/lib/utils"
+// import { cn } from "~/lib/utils"
 
 export function TopBar({ role }: { role: string }) {
   const pathname = usePathname()

@@ -64,7 +64,7 @@ export default function AdminShopsPage() {
   }
 
   return (
-    <div className="px-4 py-6 lg:px-8">
+    <div className="">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Active Shops</h1>
