@@ -1,4 +1,4 @@
-import styles from "./marketing-theme.module.css";
+import styles from "../../../styles/marketing-theme.module.css";
 
 export default function MarketingLayout({
   children,

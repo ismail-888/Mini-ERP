@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { signOut } from "next-auth/react"; // استيراد دالة الخروج
 
 import { usePathname } from "~/i18n/routing";
 import {
@@ -12,7 +13,8 @@ import {
   ShieldCheck,
   Settings,
   User2,
-  ChevronRight,
+  LogOut,
+  ChevronUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -24,15 +26,25 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "~/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import { cn } from "~/lib/utils";
 import Link from "next/link";
 
 export function AppSidebar({
   role,
+  user, // استلام بيانات المستخدم هنا
   ...props
-}: { role: "ADMIN" | "MERCHANT" } & React.ComponentProps<typeof Sidebar>) {
+}: { 
+  role: "ADMIN" | "MERCHANT";
+  user?: { name?: string | null; email?: string | null }; 
+} & React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const  t  = useTranslations("sidebar");
+  const t = useTranslations("sidebar");
 
   const navItems =
     role === "ADMIN"
@@ -50,7 +62,7 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon" className="border-e-0" {...props}>
-      {/* Header: Centered Logo for Collapsed State */}
+      {/* Header (Logo) - كما هو بدون تغيير */}
       <SidebarHeader className="h-16 border-b border-sidebar-border/50 bg-sidebar/50 backdrop-blur-sm overflow-hidden flex items-center justify-center">
         <SidebarMenu>
           <SidebarMenuItem className="flex justify-center">
@@ -70,11 +82,10 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      {/* Content: Fix for Link styling persistence */}
+      {/* Content (Navigation) - كما هو بدون تغيير */}
       <SidebarContent className="bg-sidebar mt-4 overflow-x-hidden">
         <SidebarMenu className="px-2 gap-1.5">
           {navItems.map((item) => {
-            // Section roots (/admin, /dashboard) active only on exact match; others also on sub-routes
             const isSectionRoot = item.url === "/admin" || item.url === "/dashboard";
             const isActive = isSectionRoot
               ? pathname === item.url
@@ -97,17 +108,12 @@ export function AppSidebar({
                         : "hover:bg-accent/60 text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    {/* Icon Container: Centered at 4.5rem width */}
                     <div className="flex size-9 shrink-0 items-center justify-center">
                         <item.icon className={cn("size-5 transition-transform", isActive && "scale-110")} />
                     </div>
-                    
-                    {/* Labels: Hidden in icon mode */}
                     <span className="ml-2 truncate font-medium group-data-[collapsible=icon]:hidden">
                       {item.title}
                     </span>
-
-                    {/* Left Indicator: Adjusted for collapsed mode */}
                     {isActive && (
                       <span className={cn(
                         "absolute inset-y-2.5 w-1 rounded-full bg-primary",
@@ -122,23 +128,48 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarContent>
 
-      {/* Footer: Centered User Profile */}
-      <SidebarFooter className="border-t border-sidebar-border/50 bg-sidebar/50 p-2 overflow-hidden flex items-center justify-center">
-        <SidebarMenu className="w-full">
-          <SidebarMenuItem className="flex justify-center">
-            <SidebarMenuButton
-              size="lg"
-              className="w-full bg-accent/30 hover:bg-accent/50 transition-colors rounded-xl border border-transparent h-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-            >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <User2 className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-xs leading-tight ml-2 group-data-[collapsible=icon]:hidden">
-                <span className="truncate font-bold text-foreground">Ismail BK</span>
-                <span className="truncate text-[10px] text-muted-foreground uppercase tracking-widest">Owner</span>
-              </div>
-              <ChevronRight className="ml-auto size-3 text-muted-foreground/50 group-data-[collapsible=icon]:hidden" />
-            </SidebarMenuButton>
+      {/* Footer المحدث: بيانات ديناميكية و Dropdown للـ Logout */}
+      <SidebarFooter className="border-t border-sidebar-border/50 bg-sidebar/50 p-2 overflow-hidden">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="w-full bg-accent/30 hover:bg-accent/50 transition-colors rounded-xl border border-transparent h-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+                >
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <User2 className="size-4" />
+                  </div>
+                  <div className="grid flex-1 text-left text-xs leading-tight ml-2 group-data-[collapsible=icon]:hidden">
+                    <span className="truncate font-bold text-foreground">
+                        {user?.name ?? "User"} 
+                    </span>
+                    <span className="truncate text-[10px] text-muted-foreground uppercase tracking-widest">
+                        {role}
+                    </span>
+                  </div>
+                  <ChevronUp className="ml-auto size-3 text-muted-foreground/50 group-data-[collapsible=icon]:hidden" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg p-2"
+                align="center"
+              >
+                <DropdownMenuItem className="cursor-pointer">
+                  <Settings className="mr-2 size-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  onClick={() => signOut({ callbackUrl: "/" })} // دالة تسجيل الخروج
+                >
+                  <LogOut className="mr-2 size-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

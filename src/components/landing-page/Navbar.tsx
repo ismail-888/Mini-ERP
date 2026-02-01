@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { MarketingButton } from "./MarketingButton";
 import { Menu, X } from "lucide-react";
+import { Link } from "~/i18n/routing"; // استيراد الـ Link الذكي الخاص بمشروعك
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,16 +17,16 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* Logo */}
-          <a href="#" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl gradient-emerald flex items-center justify-center shadow-soft">
+          {/* Logo - نستخدم Link أيضاً للعودة للرئيسية */}
+          <Link href="/" className="flex items-center gap-2">
+            {/* <div className="w-10 h-10 rounded-xl gradient-emerald flex items-center justify-center shadow-soft">
               <span className="text-accent-foreground font-bold text-lg">م</span>
-            </div>
+            </div> */}
             <div className="flex flex-col">
               <span className="font-bold text-lg text-foreground leading-tight">Mousaheb</span>
               <span className="text-xs text-muted-foreground font-arabic">موصاحب</span>
             </div>
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
@@ -40,13 +41,14 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons - الأزرار الآن تعمل */}
           <div className="hidden md:flex items-center gap-3">
-            <MarketingButton variant="ghost" size="sm">
-              Login
+            <MarketingButton variant="ghost" size="sm" asChild>
+              <Link href="/login">Login</Link>
             </MarketingButton>
-            <MarketingButton variant="emerald" size="sm">
-              Start Free Trial
+            
+            <MarketingButton variant="emerald" size="sm" asChild>
+              <Link href="/register">Start Free Trial</Link>
             </MarketingButton>
           </div>
 
@@ -74,11 +76,13 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <MarketingButton variant="ghost" className="w-full justify-center">
-                  Login
+                {/* روابط الموبايل */}
+                <MarketingButton variant="ghost" className="w-full justify-center" asChild>
+                  <Link href="/login" onClick={() => setIsOpen(false)}>Login</Link>
                 </MarketingButton>
-                <MarketingButton variant="emerald" className="w-full justify-center">
-                  Start Free Trial
+                
+                <MarketingButton variant="emerald" className="w-full justify-center" asChild>
+                  <Link href="/register" onClick={() => setIsOpen(false)}>Start Free Trial</Link>
                 </MarketingButton>
               </div>
             </div>

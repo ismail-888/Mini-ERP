@@ -13,7 +13,12 @@
   "password": "كلمة المرور",
   "register_button": "تسجيل",
   "login_button": "تسجيل الدخول",
-  "loading": "جاري التحميل..."
+  "loading": "جاري التحميل...",
+  "back_to_home": "العودة للرئيسية",
+  "register_link": "تسجيل",
+  "login_link": "تسجيل الدخول",
+  "dont_have_account": "ليس لديك حساب؟",
+  "already_have_account": "لديك حساب؟"
 }
 }
 

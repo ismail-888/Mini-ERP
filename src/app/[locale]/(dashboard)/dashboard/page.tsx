@@ -78,7 +78,7 @@ export default function HomePage() {
           Quick Actions
         </h2>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Link href="/pos">
+          <Link href="/dashboard/pos">
             <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md">
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -88,7 +88,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/inventory">
+          <Link href="/dashboard/inventory">
             <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md">
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -98,7 +98,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/reports">
+          <Link href="/dashboard/reports">
             <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md">
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -108,7 +108,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/admin">
+          {/* <Link href="/admin">
             <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md">
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
@@ -117,7 +117,7 @@ export default function HomePage() {
                 <span className="text-sm font-medium">Admin</span>
               </CardContent>
             </Card>
-          </Link>
+          </Link> */}
         </div>
       </div>
 

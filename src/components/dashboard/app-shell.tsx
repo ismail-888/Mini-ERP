@@ -8,19 +8,23 @@ import { BottomNavigation } from "./bottom-navigation"
 import { ExchangeRateProvider } from "~/contexts/exchange-rate-context"
 import { CartProvider } from "~/contexts/cart-context"
 
-// تحديث الـ Type ليتوافق مع الـ Enum في Prisma والـ Auth Config
-export function AppShell({ 
-  children, 
-  role 
-}: { 
-  children: ReactNode; 
-  role: "ADMIN" | "MERCHANT" 
-}) {
+interface AppShellProps {
+  children: ReactNode;
+  role: "ADMIN" | "MERCHANT";
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+}
+
+export function AppShell({ children, role, user }: AppShellProps) {
   return (
     <ExchangeRateProvider>
       <CartProvider>
         <SidebarProvider>
-          <AppSidebar role={role} />
+          {/* نمرر الـ user هنا ليعرض البيانات الحقيقية */}
+          <AppSidebar role={role} user={user} />
           
           <SidebarInset className="flex flex-col min-h-screen">
             <TopBar role={role} />
@@ -29,7 +33,6 @@ export function AppShell({
               {children}
             </main>
 
-            {/* الآن المقارنة ستنجح لأن الـ role القادم من السيرفر سيكون MERCHANT */}
             {role === "MERCHANT" && (
               <div className="lg:hidden">
                 <BottomNavigation />
