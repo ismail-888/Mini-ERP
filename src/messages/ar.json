@@ -2,5 +2,18 @@
   "sidebar": {
     "admin_overview": "نظرة عامة",
     "dashboard": "لوحة القيادة"
-  }
+  },
+  "auth": {
+  "register_title": "إنشاء حساب جديد",
+  "register_subtitle": "ابدأ بإدارة عملك مع موصاحب",
+  "login_title": "مرحباً بعودتك",
+  "login_subtitle": "سجل الدخول إلى لوحة التحكم",
+  "full_name": "الاسم الكامل",
+  "email": "البريد الإلكتروني",
+  "password": "كلمة المرور",
+  "register_button": "تسجيل",
+  "login_button": "تسجيل الدخول",
+  "loading": "جاري التحميل..."
 }
+}
+

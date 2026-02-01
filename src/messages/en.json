@@ -2,5 +2,17 @@
   "sidebar": {
     "admin_overview": "Admin Overview",
     "dashboard": "Dashboard"
-  }
+  },
+  "auth": {
+  "register_title": "Create an Account",
+  "register_subtitle": "Start managing your business with Mousaheb",
+  "login_title": "Welcome Back",
+  "login_subtitle": "Login to your dashboard",
+  "full_name": "Full Name",
+  "email": "Email",
+  "password": "Password",
+  "register_button": "Register",
+  "login_button": "Login",
+  "loading": "Loading..."
+}
 }

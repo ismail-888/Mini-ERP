@@ -15,7 +15,7 @@ datasource db {
 
 enum Role {
     ADMIN      // أنت (مدير النظام)
-    SHOP_OWNER // صاحب المحل
+    MERCHANT // صاحب المحل
 }
 
 enum Plan {
@@ -89,11 +89,12 @@ model User {
     id            String    @id @default(cuid())
     name          String?
     email         String?   @unique
+    password      String?
     emailVerified DateTime?
     image         String?
     
     // إعدادات الحساب والصلاحيات
-    role          Role      @default(SHOP_OWNER)
+    role          Role      @default(MERCHANT)
     plan          Plan      @default(FREE_TRIAL)
     isActive      Boolean   @default(true)
     

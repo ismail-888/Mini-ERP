@@ -7,7 +7,7 @@ import { ExchangeRateHeader } from "./exchange-rate-header"
 import { usePathname } from "next/navigation"
 // import { cn } from "~/lib/utils"
 
-export function TopBar({ role }: { role: string }) {
+export function TopBar({ role }: { role: "ADMIN" | "MERCHANT" }) {
   const pathname = usePathname()
   
   const segments = pathname.split('/').filter(Boolean)
@@ -33,7 +33,7 @@ export function TopBar({ role }: { role: string }) {
       <div className="flex items-center gap-1 sm:gap-3">
         {/* حاوية سعر الصرف - قد تحتاج بداخل مكون ExchangeRateHeader لجعل الخط أصغر في الجوال */}
         <div className="flex items-center">
-          {role === "merchant" && <ExchangeRateHeader />}
+          {role === "MERCHANT" && <ExchangeRateHeader />}
         </div>
         
         {/* الفاصل يختفي في الجوال لزيادة المساحة */}

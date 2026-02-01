@@ -30,12 +30,12 @@ import Link from "next/link";
 export function AppSidebar({
   role,
   ...props
-}: { role: "admin" | "merchant" } & React.ComponentProps<typeof Sidebar>) {
+}: { role: "ADMIN" | "MERCHANT" } & React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const  t  = useTranslations("sidebar");
 
   const navItems =
-    role === "admin"
+    role === "ADMIN"
       ? [
           { title: t("admin_overview"), url: "/admin", icon: ShieldCheck },
           { title: "Active Shops", url: "/admin/shops", icon: Home },
