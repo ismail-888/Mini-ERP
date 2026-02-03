@@ -23,13 +23,20 @@ export async function register(values: z.infer<typeof RegisterSchema>) {
     return { error: "هذا البريد الإلكتروني مستخدم بالفعل" };
   }
 
-  // إنشاء المستخدم وتحديد الـ Role كـ MERCHANT افتراضياً
+  // حساب تاريخ انتهاء الفترة التجريبية (7 أيام من لحظة التسجيل)
+  const trialDuration = 7 * 24 * 60 * 60 * 1000; // بالملي ثانية
+  const trialEndsAt = new Date(Date.now() + trialDuration);
+
+  // إنشاء المستخدم مع ضبط الخطة والتواريخ
   await db.user.create({
     data: {
       name,
       email,
       password: hashedPassword,
-      role: "MERCHANT", 
+      role: "MERCHANT",
+      plan: "FREE_TRIAL", // الخطة الافتراضية
+      status: "ACTIVE",    // الحالة نشطة في البداية
+      trialEndsAt: trialEndsAt, // حفظ تاريخ الانتهاء
     },
   });
 

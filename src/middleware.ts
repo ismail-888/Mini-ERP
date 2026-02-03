@@ -1,39 +1,58 @@
 import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
-import { auth } from "~/server/auth"; // تأكد من المسار الصحيح لملف auth الخاص بك
+import { auth } from "~/server/auth";
 
-// 1. إنشاء ميدل وير الترجمة
 const intlMiddleware = createMiddleware(routing);
 
-// 2. دمج الترجمة مع المصادقة
 export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
-  const userRole = req.auth?.user?.role;
+  const user = req.auth?.user;
 
-  // استخراج الـ Locale الحالي من الرابط (ar أو en)
   const locale = nextUrl.pathname.split('/')[1] ?? 'ar';
 
-  // --- منطق الحماية (Route Guards) ---
-  
   const isAdminRoute = nextUrl.pathname.includes('/admin');
   const isDashboardRoute = nextUrl.pathname.includes('/dashboard');
+  const isUpgradePage = nextUrl.pathname.includes('/upgrade');
 
-  // إذا حاول دخول صفحة Admin وهو ليس Admin
-  if (isAdminRoute && userRole !== "ADMIN") {
+  // --- 1. حماية مسارات الأدمن ---
+  if (isAdminRoute && user?.role !== "ADMIN") {
     return Response.redirect(new URL(`/${locale}/dashboard`, nextUrl));
   }
 
-  // إذا حاول دخول Dashboard وهو غير مسجل دخول
+  // --- 2. حماية مسارات الداشبورد (تسجيل الدخول) ---
   if (isDashboardRoute && !isLoggedIn) {
     return Response.redirect(new URL(`/${locale}/login`, nextUrl));
   }
 
-  // تنفيذ منطق الترجمة الافتراضي
+  // --- 3. منطق انتهاء الاشتراك وفترة السماح (للتاجر فقط) ---
+  if (isDashboardRoute && user?.role === "MERCHANT" && !isUpgradePage) {
+    
+    // إذا كانت الحالة محددة يدوياً كمنتهية
+    if (user.status === "EXPIRED") {
+      return Response.redirect(new URL(`/${locale}/upgrade`, nextUrl));
+    }
+
+    // حساب فترة السماح (Grace Period)
+    if (user.plan === "FREE_TRIAL" && user.trialEndsAt) {
+      const trialEndDate = new Date(user.trialEndsAt);
+      const graceEndDate = new Date(trialEndDate);
+      graceEndDate.setDate(graceEndDate.getDate() + 3); // إضافة 3 أيام سماح
+
+      const now = new Date();
+
+      // إذا تخطى الوقت الحالي تاريخ انتهاء التجربة + أيام السماح
+      if (now > graceEndDate) {
+        return Response.redirect(new URL(`/${locale}/upgrade`, nextUrl));
+      }
+    }
+    
+    // ملاحظة: يمكنك هنا إضافة منطق مشابه للخطط المدفوعة (MONTHLY/ANNUAL) لاحقاً
+  }
+
   return intlMiddleware(req);
 });
 
 export const config = {
-  // تغطية كل المسارات ما عدا الملفات التقنية
   matcher: ['/((?!api|_next|_vercel|.*\\..*).*)']
 };

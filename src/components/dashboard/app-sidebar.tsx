@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { signOut } from "next-auth/react"; // استيراد دالة الخروج
+import { UpgradeButton } from "./upgrade-button";
 
 import { usePathname } from "~/i18n/routing";
 import {
@@ -37,14 +38,29 @@ import Link from "next/link";
 
 export function AppSidebar({
   role,
-  user, // استلام بيانات المستخدم هنا
+  user,
   ...props
 }: { 
   role: "ADMIN" | "MERCHANT";
-  user?: { name?: string | null; email?: string | null }; 
+  // تحديث النوع هنا ليشمل الحقول الحقيقية من الـ Session
+  user?: { 
+    name?: string | null; 
+    email?: string | null; 
+    plan?: "FREE_TRIAL" | "SIX_MONTHS" | "ANNUAL"; 
+  }; 
 } & React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const t = useTranslations("sidebar");
+
+  // دالة مساعدة لتحويل الـ Enum إلى نص مقروء
+  const getPlanName = (plan?: string | null) => {
+    switch (plan) {
+      case "FREE_TRIAL": return "Free Trial";
+      case "SIX_MONTHS": return "6 Months Pro";
+      case "ANNUAL": return "Annual Pro";
+      default: return "Free Trial";
+    }
+  };
 
   const navItems =
     role === "ADMIN"
@@ -129,7 +145,28 @@ export function AppSidebar({
       </SidebarContent>
 
       {/* Footer المحدث: بيانات ديناميكية و Dropdown للـ Logout */}
-      <SidebarFooter className="border-t border-sidebar-border/50 bg-sidebar/50 p-2 overflow-hidden">
+      <SidebarFooter className="border-t border-sidebar-border/50 bg-sidebar/50 p-2 space-y-3 overflow-hidden">
+
+      {role === "MERCHANT" && (
+          <div className="px-2 group-data-[collapsible=icon]:hidden">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                Current Plan
+              </span>
+              <span className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                user?.plan === "FREE_TRIAL" 
+                  ? "bg-amber-500/10 text-amber-600" 
+                  : "bg-emerald-500/10 text-emerald-600"
+              )}>
+                {getPlanName(user?.plan)}
+              </span>
+            </div>
+            {/* إظهار الزر فقط إذا لم يكن مشتركاً في الخطة السنوية مثلاً */}
+            {user?.plan !== "ANNUAL" && <UpgradeButton />}
+          </div>
+        )}
+
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>

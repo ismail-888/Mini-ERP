@@ -20,9 +20,15 @@ enum Role {
 
 enum Plan {
     FREE_TRIAL    // تجربة 7 أيام
-    MONTHLY       // شهر واحد
-    SIX_MONTHS    // 6 أشهر
-    ANNUAL        // سنة (12 شهر)
+    SIX_MONTHS    // اشتراك نصف سنوي
+    ANNUAL        // اشتراك سنوي
+}
+
+enum SubscriptionStatus {
+    ACTIVE
+    EXPIRED
+    PAST_DUE
+    CANCELED
 }
 
 // --- جداول "موصاحب" (Inventory & POS) ---
@@ -30,27 +36,27 @@ enum Plan {
 model Product {
     id              String   @id @default(cuid())
     name            String
-    barcode         String?  @unique
+    barcode         String?  
     image           String?
     category        String?
     brand           String?
     
-    // إدارة الأموال بالدولار
     costPriceUSD    Float    @default(0)
     salePriceUSD    Float    @default(0)
     
-    // إدارة المخزون
     currentStock    Int      @default(0)
     minStockAlert   Int      @default(5)
     expiryDate      DateTime?
 
-    // ربط المنتج بصاحب المحل
     userId          String
     user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     sales           SaleItem[]
     createdAt       DateTime @default(now())
     updatedAt       DateTime @updatedAt
+
+    // تأكد من أن الباركود فريد فقط لكل مستخدم (محل) وليس على مستوى السيستم كله
+    @@unique([barcode, userId]) 
 }
 
 model Sale {
@@ -93,13 +99,15 @@ model User {
     emailVerified DateTime?
     image         String?
     
-    // إعدادات الحساب والصلاحيات
     role          Role      @default(MERCHANT)
     plan          Plan      @default(FREE_TRIAL)
-    isActive      Boolean   @default(true)
     
-    // تواريخ الاشتراك
-    trialEndsAt        DateTime  @default(dbgenerated("NOW() + interval '7 days'"))
+    // حالة الحساب للتحكم في الوصول
+    status        SubscriptionStatus @default(ACTIVE)
+    
+    // إدارة التواريخ
+    createdAt     DateTime  @default(now())
+    trialEndsAt   DateTime? // يتم تحديثه برمجياً عند التسجيل (now + 7 days)
     subscriptionEndsAt DateTime?
 
     // العلاقات
@@ -107,6 +115,18 @@ model User {
     sessions      Session[]
     products      Product[]
     sales         Sale[]
+    
+    // سجل أسعار الصرف الخاصة بهذا المستخدم (المحل)
+    exchangeRates ExchangeRate[] 
+}
+
+// نحتاجه لنعرف متى قام المحل بتغيير سعر الصرف وما هو السعر الحالي
+model ExchangeRate {
+    id        String   @id @default(cuid())
+    rate      Float    // مثلاً 89500
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
 }
 
 model Account {
