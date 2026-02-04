@@ -15,6 +15,7 @@ interface AppShellProps {
     name?: string | null;
     email?: string | null;
     image?: string | null;
+    plan?: "FREE_TRIAL" | "SIX_MONTHS" | "ANNUAL";
   };
 }
 

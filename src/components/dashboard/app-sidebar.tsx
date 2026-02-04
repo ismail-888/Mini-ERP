@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { signOut } from "next-auth/react"; // استيراد دالة الخروج
+import { signOut } from "next-auth/react";
 import { UpgradeButton } from "./upgrade-button";
-
 import { usePathname } from "~/i18n/routing";
 import {
   Home,
@@ -16,6 +15,7 @@ import {
   User2,
   LogOut,
   ChevronUp,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { cn } from "~/lib/utils";
-import Link from "next/link";
+import { Link } from "~/i18n/routing"; // تأكد من استخدام Link من i18n/routing
 
 export function AppSidebar({
   role,
@@ -42,7 +42,6 @@ export function AppSidebar({
   ...props
 }: { 
   role: "ADMIN" | "MERCHANT";
-  // تحديث النوع هنا ليشمل الحقول الحقيقية من الـ Session
   user?: { 
     name?: string | null; 
     email?: string | null; 
@@ -52,7 +51,6 @@ export function AppSidebar({
   const pathname = usePathname();
   const t = useTranslations("sidebar");
 
-  // دالة مساعدة لتحويل الـ Enum إلى نص مقروء
   const getPlanName = (plan?: string | null) => {
     switch (plan) {
       case "FREE_TRIAL": return "Free Trial";
@@ -70,7 +68,7 @@ export function AppSidebar({
           { title: "Settings", url: "/admin/settings", icon: Settings },
         ]
       : [
-          { title: t("dashboard"), url: "/dashboard", icon: Home },
+          { title: t("dashboard"), url: "/dashboard", icon: LayoutDashboard },
           { title: "Point of Sale", url: "/dashboard/pos", icon: ShoppingCart },
           { title: "Inventory", url: "/dashboard/inventory", icon: Package },
           { title: "Reports", url: "/dashboard/reports", icon: BarChart3 },
@@ -78,7 +76,7 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon" className="border-e-0" {...props}>
-      {/* Header (Logo) - كما هو بدون تغيير */}
+      {/* Header (Logo) */}
       <SidebarHeader className="h-16 border-b border-sidebar-border/50 bg-sidebar/50 backdrop-blur-sm overflow-hidden flex items-center justify-center">
         <SidebarMenu>
           <SidebarMenuItem className="flex justify-center">
@@ -89,8 +87,8 @@ export function AppSidebar({
               <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20 text-primary-foreground">
                 <span className="font-black text-lg">M</span>
               </div>
-              <div className="flex flex-col gap-0.5 leading-none px-2 group-data-[collapsible=icon]:hidden ">
-                <span className="text-sm font-bold tracking-tight uppercase">Mousaheb</span>
+              <div className="flex flex-col gap-0.5 leading-none px-2 group-data-[collapsible=icon]:hidden">
+                <span className="text-sm font-bold tracking-tight uppercase italic text-primary">Mousaheb</span>
                 <span className="text-[10px] font-medium text-muted-foreground/70">v1.0.0</span>
               </div>
             </SidebarMenuButton>
@@ -98,14 +96,11 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      {/* Content (Navigation) - كما هو بدون تغيير */}
+      {/* Content (Navigation) */}
       <SidebarContent className="bg-sidebar mt-4 overflow-x-hidden">
         <SidebarMenu className="px-2 gap-1.5">
           {navItems.map((item) => {
-            const isSectionRoot = item.url === "/admin" || item.url === "/dashboard";
-            const isActive = isSectionRoot
-              ? pathname === item.url
-              : pathname === item.url || pathname.startsWith(`${item.url}/`);
+            const isActive = pathname === item.url || (item.url !== "/dashboard" && pathname.startsWith(item.url));
 
             return (
               <SidebarMenuItem key={item.title}>
@@ -130,12 +125,6 @@ export function AppSidebar({
                     <span className="ml-2 truncate font-medium group-data-[collapsible=icon]:hidden">
                       {item.title}
                     </span>
-                    {isActive && (
-                      <span className={cn(
-                        "absolute inset-y-2.5 w-1 rounded-full bg-primary",
-                        "left-0 group-data-[collapsible=icon]:left-[2px]" 
-                      )} />
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -144,38 +133,44 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarContent>
 
-      {/* Footer المحدث: بيانات ديناميكية و Dropdown للـ Logout */}
+      {/* Footer */}
       <SidebarFooter className="border-t border-sidebar-border/50 bg-sidebar/50 p-2 space-y-3 overflow-hidden">
-
+      
+      {/* 1. قسم الاشتراك المحدث */}
       {role === "MERCHANT" && (
           <div className="px-2 group-data-[collapsible=icon]:hidden">
             <div className="mb-2 flex items-center justify-between px-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-                Current Plan
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 font-sans">
+                Plan
               </span>
               <span className={cn(
                 "rounded-full px-2 py-0.5 text-[10px] font-bold",
                 user?.plan === "FREE_TRIAL" 
-                  ? "bg-amber-500/10 text-amber-600" 
-                  : "bg-emerald-500/10 text-emerald-600"
+                  ? "bg-amber-500/10 text-amber-600 border border-amber-500/20" 
+                  : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
               )}>
                 {getPlanName(user?.plan)}
               </span>
             </div>
-            {/* إظهار الزر فقط إذا لم يكن مشتركاً في الخطة السنوية مثلاً */}
-            {user?.plan !== "ANNUAL" && <UpgradeButton />}
+            {/* إظهار زر الترقية إذا لم يكن قد وصل لأعلى باقة */}
+            {user?.plan !== "ANNUAL" && (
+              <div className="mt-2">
+                <UpgradeButton />
+              </div>
+            )}
           </div>
         )}
 
+        {/* 2. قائمة المستخدم والـ Logout */}
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="w-full bg-accent/30 hover:bg-accent/50 transition-colors rounded-xl border border-transparent h-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+                  className="w-full bg-accent/30 hover:bg-accent/50 transition-colors rounded-xl border border-transparent h-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 cursor-pointer"
                 >
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary cursor-pointer">
                     <User2 className="size-4" />
                   </div>
                   <div className="grid flex-1 text-left text-xs leading-tight ml-2 group-data-[collapsible=icon]:hidden">
@@ -194,13 +189,15 @@ export function AppSidebar({
                 className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg p-2"
                 align="center"
               >
-                <DropdownMenuItem className="cursor-pointer">
-                  <Settings className="mr-2 size-4" />
-                  <span>Settings</span>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/settings" className="flex items-center w-full cursor-pointer">
+                    <Settings className="mr-2 size-4" />
+                    <span>Settings</span>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
-                  onClick={() => signOut({ callbackUrl: "/" })} // دالة تسجيل الخروج
+                  onClick={() => signOut({ callbackUrl: "/" })}
                 >
                   <LogOut className="mr-2 size-4" />
                   <span>Logout</span>

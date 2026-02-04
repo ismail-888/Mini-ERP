@@ -6,7 +6,7 @@ import { Button } from "~/components/ui/button"
 import { Badge } from "~/components/ui/badge"
 import { useCart } from "~/contexts/cart-context"
 import { useExchangeRate } from "~/contexts/exchange-rate-context"
-import { cn } from "~/lib/utils"
+// import { cn } from "~/lib/utils"
 
 interface CartDrawerProps {
   onClose?: () => void

@@ -45,7 +45,7 @@ export function BarcodeScanner({ open, onClose, onScanned }: BarcodeScannerProps
       ]
       const randomBarcode = barcodes[Math.floor(Math.random() * barcodes.length)]
       setIsScanning(false)
-      onScanned(randomBarcode)
+      onScanned(randomBarcode ?? "No barcode found")
     }, 1500)
   }
 

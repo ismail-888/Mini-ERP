@@ -1,6 +1,7 @@
 import { auth } from "~/server/auth";
 import { AppShell } from "~/components/dashboard/app-shell";
 import { redirect } from "next/navigation";
+import { SubscriptionAlert } from "~/components/dashboard/subscription-alert";
 
 export default async function DashboardLayout({ 
   children,
@@ -11,14 +12,18 @@ export default async function DashboardLayout({
 }) {
   const session = await auth();
 
-  // إذا لم يكن مسجل دخول، يوجهه لصفحة الدخول
   if (!session) {
     redirect(`/${params.locale}/login`);
   }
 
   return (
-    <AppShell role="MERCHANT" user={session.user}>
-      {children}
-    </AppShell>
+    <div className="flex flex-col min-h-screen">
+      {/* تمرير بيانات المستخدم هنا مباشرة */}
+      <SubscriptionAlert user={session.user} />
+      
+      <AppShell role={session.user.role} user={session.user}>
+        {children}
+      </AppShell>
+    </div>
   );
 }

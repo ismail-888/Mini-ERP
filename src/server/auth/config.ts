@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "~/server/db";
 
-/** الحقول التي نريد جلبها من قاعدة البيانات */
+/** الحقول الكاملة من الداتابيز */
 type UserWithCredentials = {
   id: string;
   email: string | null;
@@ -13,36 +13,41 @@ type UserWithCredentials = {
   role: "ADMIN" | "MERCHANT";
   status: "ACTIVE" | "EXPIRED" | "PAST_DUE" | "CANCELED";
   plan: "FREE_TRIAL" | "SIX_MONTHS" | "ANNUAL";
-  trialEndsAt: Date | null; // إضافة هذا الحقل
+  trialEndsAt: Date | null;
+  subscriptionEndsAt: Date | null; // الحقل الجديد للاشتراك المدفوع
 };
 
-/** الحقول التي ستمرر لـ JWT ثم لـ Session */
+/** البيانات الممررة للمصادقة */
 type AuthorizedUser = {
   id: string;
-  email: string | null;
-  name: string | null;
+  name: string;
   role: "ADMIN" | "MERCHANT";
-  status: "ACTIVE" | "EXPIRED" | "PAST_DUE" | "CANCELED";
-  plan: "FREE_TRIAL" | "SIX_MONTHS" | "ANNUAL";
-  trialEndsAt: Date | null; // إضافة هذا الحقل
+  status: UserWithCredentials["status"];
+  plan: UserWithCredentials["plan"];
+  trialEndsAt: Date | null;
+  subscriptionEndsAt: Date | null;
 };
 
 type TokenWithRole = { 
   id?: string; 
+  name?: string;
   role?: "ADMIN" | "MERCHANT";
   status?: AuthorizedUser["status"];
   plan?: AuthorizedUser["plan"];
-  trialEndsAt?: string | null; // JWT يخزن التاريخ كنص (String) عادةً
+  trialEndsAt?: string | null;
+  subscriptionEndsAt?: string | null; // الحقل الجديد في التوكن
 };
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
+      name: string;
       role: "ADMIN" | "MERCHANT";
-      status: "ACTIVE" | "EXPIRED" | "PAST_DUE" | "CANCELED";
-      plan: "FREE_TRIAL" | "SIX_MONTHS" | "ANNUAL";
-      trialEndsAt: Date | null; // إضافة هذا الحقل ليراه الميدل وير والسايدبار
+      status: AuthorizedUser["status"];
+      plan: AuthorizedUser["plan"];
+      trialEndsAt: Date | null;
+      subscriptionEndsAt: Date | null; // الحقل الجديد في الجلسة
     } & DefaultSession["user"];
   }
 }
@@ -71,30 +76,29 @@ export const authConfig = {
 
         return {
           id: user.id,
-          email: user.email,
           name: user.name,
           role: user.role,
           status: user.status,
           plan: user.plan,
-          trialEndsAt: user.trialEndsAt, // تمريره من الداتابيز
-        } satisfies AuthorizedUser;
+          trialEndsAt: user.trialEndsAt,
+          subscriptionEndsAt: user.subscriptionEndsAt,
+        } as AuthorizedUser;
       },
     }),
   ],
   adapter: PrismaAdapter(db as unknown as Parameters<typeof PrismaAdapter>[0]),
-  session: {
-    strategy: "jwt",
-  },
+  session: { strategy: "jwt" },
   callbacks: {
     jwt: ({ token, user }) => {
       if (user) {
         const u = user as AuthorizedUser;
         token.id = u.id;
+        token.name = u.name;
         token.role = u.role;
         token.status = u.status;
         token.plan = u.plan;
-        // تخزين التاريخ في التوكن (يُحول لـ ISO String تلقائياً)
-        token.trialEndsAt = u.trialEndsAt?.toISOString(); 
+        token.trialEndsAt = u.trialEndsAt?.toISOString();
+        token.subscriptionEndsAt = u.subscriptionEndsAt?.toISOString();
       }
       return token;
     },
@@ -105,16 +109,15 @@ export const authConfig = {
         user: {
           ...session.user,
           id: t.id ?? "",
+          name: t.name,
           role: t.role ?? "MERCHANT",
           status: t.status ?? "ACTIVE",
           plan: t.plan ?? "FREE_TRIAL",
-          // تحويل النص لـ Date Object مرة أخرى عند الاستخدام
           trialEndsAt: t.trialEndsAt ? new Date(t.trialEndsAt) : null,
+          subscriptionEndsAt: t.subscriptionEndsAt ? new Date(t.subscriptionEndsAt) : null,
         },
       };
     },
   },
-  pages: {
-    signIn: "/login",
-  },
+  pages: { signIn: "/login" },
 } satisfies NextAuthConfig;
