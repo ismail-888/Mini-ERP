@@ -11,6 +11,7 @@ import { CartProvider } from "~/contexts/cart-context"
 interface AppShellProps {
   children: ReactNode;
   role: "ADMIN" | "MERCHANT";
+  initialExchangeRate?: number;
   user?: {
     name?: string | null;
     email?: string | null;
@@ -19,9 +20,9 @@ interface AppShellProps {
   };
 }
 
-export function AppShell({ children, role, user }: AppShellProps) {
+export function AppShell({ children, role, user, initialExchangeRate }: AppShellProps) {
   return (
-    <ExchangeRateProvider>
+    <ExchangeRateProvider initialRate={initialExchangeRate}>
       <CartProvider>
         <SidebarProvider>
           {/* نمرر الـ user هنا ليعرض البيانات الحقيقية */}

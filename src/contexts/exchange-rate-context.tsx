@@ -1,36 +1,30 @@
 "use client"
 
 import { createContext, useContext, useState, type ReactNode } from "react"
-import { DEFAULT_EXCHANGE_RATE } from "~/lib/mock-data"
-import type { ExchangeRate } from "~/lib/types"
 
 interface ExchangeRateContextType {
-  rate: ExchangeRate
-  updateRate: (newRate: number) => void
-  convertToLBP: (usd: number) => number
-  formatLBP: (amount: number) => string
-  formatUSD: (amount: number) => string
+  exchangeRate: number; // الرقم مباشرة (مثلاً 90000)
+  setExchangeRate: (newRate: number) => void;
+  convertToLBP: (usd: number) => number;
+  formatLBP: (amount: number) => string;
+  formatUSD: (amount: number) => string;
 }
 
 const ExchangeRateContext = createContext<ExchangeRateContextType | undefined>(undefined)
 
-export function ExchangeRateProvider({ children }: { children: ReactNode }) {
-  const [rate, setRate] = useState<ExchangeRate>({
-    usdToLBP: DEFAULT_EXCHANGE_RATE,
-    lastUpdated: new Date().toISOString(),
-  })
+export function ExchangeRateProvider({ 
+  children, 
+  initialRate = 89000 // قيمة افتراضية في حال لم تتوفر من السيرفر
+}: { 
+  children: ReactNode;
+  initialRate?: number;
+}) {
+  const [exchangeRate, setExchangeRate] = useState<number>(initialRate)
 
-  const updateRate = (newRate: number) => {
-    setRate({
-      usdToLBP: newRate,
-      lastUpdated: new Date().toISOString(),
-    })
-  }
-
-  const convertToLBP = (usd: number) => usd * rate.usdToLBP
+  const convertToLBP = (usd: number) => usd * exchangeRate
 
   const formatLBP = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-LB", {
       style: "decimal",
       maximumFractionDigits: 0,
     }).format(amount) + " LBP"
@@ -45,7 +39,13 @@ export function ExchangeRateProvider({ children }: { children: ReactNode }) {
 
   return (
     <ExchangeRateContext.Provider
-      value={{ rate, updateRate, convertToLBP, formatLBP, formatUSD }}
+      value={{ 
+        exchangeRate, 
+        setExchangeRate, // نسميها setExchangeRate لتشبه الـ useState
+        convertToLBP, 
+        formatLBP, 
+        formatUSD 
+      }}
     >
       {children}
     </ExchangeRateContext.Provider>
