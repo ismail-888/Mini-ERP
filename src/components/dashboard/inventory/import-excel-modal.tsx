@@ -81,8 +81,8 @@ export function ImportExcelModal({ open, onClose }: ImportExcelModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="w-[90vw] sm:max-w-md max-h-[calc(100vh-2rem)] p-0 flex flex-col">
+        <DialogHeader className="px-6 py-4 relative">
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
             Import from Excel
@@ -90,9 +90,18 @@ export function ImportExcelModal({ open, onClose }: ImportExcelModalProps) {
           <DialogDescription>
             Upload an Excel file (.xlsx or .xls) to import products in bulk.
           </DialogDescription>
+
+          <button
+            type="button"
+            onClick={handleClose}
+            className="absolute top-4 right-4 rounded-xs opacity-70 hover:opacity-100"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </DialogHeader>
 
-        <div className="py-4">
+        <div className="flex-1 overflow-auto px-6 py-4">
           {importState === "idle" && (
             <div
               onDragOver={handleDragOver}
@@ -182,20 +191,17 @@ export function ImportExcelModal({ open, onClose }: ImportExcelModalProps) {
 
         {/* Template Download */}
         {importState === "idle" && (
-          <div className="rounded-lg bg-muted/50 p-3">
+          <div className="rounded-lg bg-muted/50 p-3 px-6">
             <p className="text-xs text-muted-foreground">
               Need a template?{" "}
-              <button
-                type="button"
-                className="font-medium text-primary hover:underline"
-              >
+              <button type="button" className="font-medium text-primary hover:underline">
                 Download Excel template
               </button>
             </p>
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 px-6 py-4">
           {(importState === "idle" || importState === "error") && (
             <>
               <Button variant="outline" onClick={handleClose}>

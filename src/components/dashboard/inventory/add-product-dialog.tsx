@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import React from "react"
-import { useState, useCallback } from "react"
-import { X, ImageIcon, ScanBarcode, CalendarIcon } from "lucide-react"
+import React, { useState, useCallback, useRef } from "react";
+
+import { X, ImageIcon, ScanBarcode, CalendarIcon, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "~/components/ui/dialog"
-import { Button } from "~/components/ui/button"
-import { Input } from "~/components/ui/input"
+} from "~/components/ui/dialog";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 
 import {
   Select,
@@ -20,476 +20,467 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/components/ui/select"
-import { Calendar } from "~/components/ui/calendar"
+} from "~/components/ui/select";
+import { Calendar } from "~/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/components/ui/popover"
-import { Separator } from "~/components/ui/separator"
-import { ScrollArea } from "~/components/ui/scroll-area"
-import type { Product } from "~/lib/types"
-import { categories, brands } from "~/lib/mock-data"
-import { cn } from "~/lib/utils"
-import { format } from "date-fns"
+} from "~/components/ui/popover";
+import { Separator } from "~/components/ui/separator";
+// removed ScrollArea to rely on native scrolling within dialog content
+import { categories, brands } from "~/lib/mock-data";
+import { cn } from "~/lib/utils";
+import { format } from "date-fns";
+import { createProductAction } from "~/server/actions/product";
+import { useExchangeRate } from "~/contexts/exchange-rate-context";
+import { toast } from "sonner";
+import { useForm, type SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  ProductSchema,
+  type ProductFormValues,
+} from "~/lib/validations/product";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "~/components/ui/form";
 
 interface AddProductDialogProps {
-  open: boolean
-  onClose: () => void
-  onAdd: (product: Omit<Product, "id">) => void
+  open: boolean;
+  onClose: () => void;
 }
 
-export function AddProductDialog({
-  open,
-  onClose,
-  onAdd,
-}: AddProductDialogProps) {
-  // Basic Info
-  const [name, setName] = useState("")
-  const [barcode, setBarcode] = useState("")
-  const [brand, setBrand] = useState("")
-  const [category, setCategory] = useState("")
-  const [subcategory, setSubcategory] = useState("")
+export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
+  const [loading, setLoading] = useState(false);
+  // expiryDate is now managed inside the react-hook-form state (see schema)
+  const [isDragging, setIsDragging] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Pricing
-  const [costUSD, setCostUSD] = useState("")
-  const [priceUSD, setPriceUSD] = useState("")
-  const [discountType, setDiscountType] = useState<"none" | "fixed" | "percentage">("none")
-  const [discountValue, setDiscountValue] = useState("")
+  const { convertToLBP, formatLBP } = useExchangeRate();
 
-  // Stock Control
-  const [stock, setStock] = useState("")
-  const [minStockAlert, setMinStockAlert] = useState("5")
-  const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined)
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(ProductSchema),
+    defaultValues: {
+      name: "",
+      barcode: "",
+      brand: "",
+      category: "",
+      costPriceUSD: 0,
+      salePriceUSD: 0,
+      currentStock: 0,
+      minStockAlert: 5,
+    },
+  });
 
-  // Image
-  const [isDragging, setIsDragging] = useState(false)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-
-  const selectedCategory = categories.find((c) => c.name === category)
+  const {
+    handleSubmit,
+    control,
+    watch,
+    reset,
+    setValue,
+  } = form;
 
   const resetForm = () => {
-    setName("")
-    setBarcode("")
-    setBrand("")
-    setCategory("")
-    setSubcategory("")
-    setCostUSD("")
-    setPriceUSD("")
-    setDiscountType("none")
-    setDiscountValue("")
-    setStock("")
-    setMinStockAlert("5")
-    setExpiryDate(undefined)
-    setImagePreview(null)
-  }
+    reset();
+    setImagePreview(null);
+  };
 
   const handleClose = () => {
-    resetForm()
-    onClose()
-  }
+    resetForm();
+    onClose();
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name || !barcode || !priceUSD || !costUSD || !category) return
+  const generateRandomBarcode = () => {
+    const random = Math.floor(Math.random() * 900000000000) + 100000000000;
+    setValue("barcode", random.toString(), { shouldValidate: true });
+  };
 
-    const product: Omit<Product, "id"> = {
-      name,
-      barcode,
-      brand: brand || undefined,
-      category,
-      subcategory: subcategory || undefined,
-      costUSD: Number.parseFloat(costUSD),
-      priceUSD: Number.parseFloat(priceUSD),
-      discountType: discountType !== "none" ? discountType : undefined,
-      discountValue: discountType !== "none" ? Number.parseFloat(discountValue) : undefined,
-      stock: Number.parseInt(stock) || 0,
-      minStockAlert: Number.parseInt(minStockAlert) || 5,
-      expiryDate: expiryDate ? format(expiryDate, "yyyy-MM-dd") : undefined,
-      image: imagePreview || undefined,
+  const onSubmit: SubmitHandler<ProductFormValues> = async (values) => {
+    try {
+      setLoading(true);
+
+      // نستخدم spread operator لنقل كل القيم من values (الاسم، السعر، المخزون، وتاريخ الانتهاء)
+      // ونضيف عليها الصورة من الـ state المحلي (imagePreview)
+      const result = await createProductAction({
+        ...values,
+        image: imagePreview ?? undefined,
+      });
+
+      if (result.success) {
+        toast.success("تم إضافة المنتج بنجاح");
+        handleClose(); // هذه الدالة تقوم بعمل reset للفورم وإغلاق الـ Dialog
+      } else {
+        // في حال وجود خطأ من السيرفر (مثل باركود مكرر)
+        toast.error(result.error);
+      }
+    } catch (error) {
+      // خطأ غير متوقع في الاتصال أو السيرفر
+      toast.error("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً");
+    } finally {
+      setLoading(false);
     }
-
-    onAdd(product)
-    resetForm()
-  }
+  };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader()
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file?.type.startsWith("image/")) {
+      const reader = new FileReader();
       reader.onload = () => {
-        setImagePreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }, [])
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader()
+    const file = e.target.files?.[0];
+    if (file?.type.startsWith("image/")) {
+      const reader = new FileReader();
       reader.onload = () => {
-        setImagePreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
+
+  const clearImage = () => {
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   // Calculate profit margin
-  const cost = Number.parseFloat(costUSD) || 0
-  const price = Number.parseFloat(priceUSD) || 0
-  const profitMargin = cost > 0 ? ((price - cost) / cost) * 100 : 0
+  const cost = watch("costPriceUSD") ?? 0;
+  const price = watch("salePriceUSD") ?? 0;
+  const profitMargin = cost > 0 ? ((price - cost) / cost) * 100 : 0;
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl p-0">
-        <DialogHeader className="px-6 pt-6">
+    <Dialog
+      open={open}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+    >
+      <DialogContent className="w-[95vw] sm:max-w-2xl md:max-w-4xl max-h-[calc(100vh-2rem)] p-0 flex flex-col">
+        <DialogHeader className="px-6 pt-6 relative">
           <DialogTitle>Add New Product</DialogTitle>
           <DialogDescription>
             Fill in all the product details. Fields marked with * are required.
           </DialogDescription>
+
+          {/* Close button inside header so it's always visible */}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="absolute top-4 right-4 rounded-xs opacity-70 hover:opacity-100"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-140px)] px-6">
-          <form onSubmit={handleSubmit} className="space-y-6 pb-4">
-            {/* Image Upload */}
-            <div className="space-y-2">
-              <label>Product Image</label>
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={cn(
-                  "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
-                  isDragging
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-muted-foreground",
-                  imagePreview && "border-solid"
-                )}
-              >
-                {imagePreview ? (
-                  <div className="relative">
-                    <img
-                      src={imagePreview || "/placeholder.svg"}
-                      alt="Product preview"
-                      className="h-32 w-32 rounded-lg object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setImagePreview(null)}
-                      className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm font-medium">Drag & drop image here</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      or click to browse
-                    </p>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileSelect}
-                      className="absolute inset-0 cursor-pointer opacity-0"
-                    />
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Basic Info Section */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Basic Info</h3>
-              <Separator />
-
+        <div className="flex-1 overflow-auto px-6 pb-4">
+          <Form {...form}>
+            <form id="add-product-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Image Upload */}
               <div className="space-y-2">
-                <label htmlFor="name">Product Name *</label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter product name"
-                  required
+                <label>Product Image</label>
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
+                    isDragging ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground",
+                    imagePreview && "border-solid",
+                  )}
+                >
+                {imagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={imagePreview ?? "/placeholder.svg"}
+                        alt="Product preview"
+                        className="h-32 w-32 rounded-lg object-cover"
+                      />
+                      <button
+                        type="button"
+                      onClick={clearImage}
+                        className="bg-destructive text-destructive-foreground absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bg-muted mb-2 flex h-12 w-12 items-center justify-center rounded-full">
+                        <ImageIcon className="text-muted-foreground h-6 w-6" />
+                      </div>
+                      <p className="text-sm font-medium">Drag & drop image here</p>
+                      <p className="text-muted-foreground mt-1 text-xs">or click to browse</p>
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="absolute inset-0 cursor-pointer opacity-0" />
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Basic Info Section */}
+              <div className="space-y-4">
+                <h3 className="text-foreground text-sm font-semibold">Basic Info</h3>
+                <Separator />
+
+                <FormField
+                  control={control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product Name *</FormLabel>
+                      <FormControl>
+                        <Input id="name" placeholder="Enter product name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="barcode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Barcode (Optional)</FormLabel>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input id="barcode" placeholder="Scan or leave empty to auto-generate" className="flex-1" {...field} />
+                        </FormControl>
+                        <Button type="button" variant="outline" size="icon" onClick={generateRandomBarcode} title="Generate Barcode">
+                          <ScanBarcode className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <FormField
+                      control={control}
+                      name="brand"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Brand</FormLabel>
+                          <FormControl>
+                            <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select brand" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {brands.map((b) => (
+                                  <SelectItem key={b} value={b}>
+                                    {b}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <FormField
+                      control={control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category *</FormLabel>
+                          <FormControl>
+                            <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map((cat) => (
+                                  <SelectItem key={cat.name} value={cat.name}>
+                                    {cat.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing Section */}
+              <div className="space-y-4">
+                <h3 className="text-foreground text-sm font-semibold">Pricing</h3>
+                <Separator />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField
+                    control={control}
+                    name="costPriceUSD"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cost Price (USD) *</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">$</span>
+                          <Input id="costUSD" type="number" step="0.01" min="0" placeholder="0.00" className="pl-7" {...field} onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
+                        </div>
+                      </FormControl>
+                      <div className="mt-1 min-h-[48px] flex items-center">
+                        <FormMessage />
+                      </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name="salePriceUSD"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sale Price (USD) *</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">$</span>
+                            <Input id="priceUSD" type="number" step="0.01" min="0" placeholder="0.00" className="pl-7" {...field} onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
+                          </div>
+                        </FormControl>
+                        <div className="mt-1 min-h-[48px] flex flex-col justify-center">
+                          {price > 0 && <p className="text-xs font-bold text-green-600">≈ {formatLBP(convertToLBP(price))}</p>}
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Profit row: span both columns so it aligns with inputs */}
+                  {cost > 0 && price > 0 && (
+                    <div className="col-span-1 sm:col-span-2">
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-muted-foreground text-sm">
+                          Profit Margin:{" "}
+                          <span className={cn("font-semibold", profitMargin > 0 ? "text-primary" : "text-destructive")}>
+                            {profitMargin.toFixed(1)}%
+                          </span>{" "}
+                          (${(price - cost).toFixed(2)} per unit)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Stock Control Section */}
+              <div className="space-y-4">
+                <h3 className="text-foreground text-sm font-semibold">Stock Control</h3>
+                <Separator />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField
+                    control={control}
+                    name="currentStock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Initial Stock</FormLabel>
+                        <FormControl>
+                          <Input id="stock" type="number" min="0" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name="minStockAlert"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Min-Stock Alert</FormLabel>
+                        <FormControl>
+                          <Input id="minStockAlert" type="number" min="0" placeholder="5" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={control}
+                  name="expiryDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expiry Date (Optional)</FormLabel>
+                      <FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn("w-full justify-start bg-transparent text-left font-normal", !field.value && "text-muted-foreground")}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(field.value, "PPP") : "Select expiry date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value ?? undefined}
+                              onSelect={(date) => field.onChange(date ?? null)}
+                              initialFocus
+                              disabled={(date) => date < new Date()}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </FormControl>
+                    </FormItem>
+                  )}
                 />
               </div>
+            </form>
+          </Form>
+        </div>
 
-              <div className="space-y-2">
-                <label htmlFor="barcode">Barcode *</label>
-                <div className="flex gap-2">
-                  <Input
-                    id="barcode"
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    placeholder="Enter or scan barcode"
-                    className="flex-1"
-                    required
-                  />
-                  <Button type="button" variant="outline" size="icon">
-                    <ScanBarcode className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="brand">Brand</label>
-                <Select value={brand} onValueChange={setBrand}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select brand" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands.map((b) => (
-                      <SelectItem key={b} value={b}>
-                        {b}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label htmlFor="category">Category *</label>
-                  <Select
-                    value={category}
-                    onValueChange={(val) => {
-                      setCategory(val)
-                      setSubcategory("")
-                    }}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.name} value={cat.name}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="subcategory">Sub-category</label>
-                  <Select
-                    value={subcategory}
-                    onValueChange={setSubcategory}
-                    disabled={!category}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select sub" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedCategory?.subcategories.map((sub) => (
-                        <SelectItem key={sub} value={sub}>
-                          {sub}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing Section */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Pricing</h3>
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label htmlFor="costUSD">Cost Price (USD) *</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      $
-                    </span>
-                    <Input
-                      id="costUSD"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={costUSD}
-                      onChange={(e) => setCostUSD(e.target.value)}
-                      placeholder="0.00"
-                      className="pl-7"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="priceUSD">Sale Price (USD) *</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      $
-                    </span>
-                    <Input
-                      id="priceUSD"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={priceUSD}
-                      onChange={(e) => setPriceUSD(e.target.value)}
-                      placeholder="0.00"
-                      className="pl-7"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {cost > 0 && price > 0 && (
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-sm text-muted-foreground">
-                    Profit Margin:{" "}
-                    <span
-                      className={cn(
-                        "font-semibold",
-                        profitMargin > 0 ? "text-primary" : "text-destructive"
-                      )}
-                    >
-                      {profitMargin.toFixed(1)}%
-                    </span>{" "}
-                    (${(price - cost).toFixed(2)} per unit)
-                  </p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label htmlFor="discountType">Discount Type</label>
-                  <Select
-                    value={discountType}
-                    onValueChange={(val) =>
-                      setDiscountType(val as "none" | "fixed" | "percentage")
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="No discount" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No discount</SelectItem>
-                      <SelectItem value="fixed">Fixed ($)</SelectItem>
-                      <SelectItem value="percentage">Percentage (%)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {discountType !== "none" && (
-                  <div className="space-y-2">
-                    <label htmlFor="discountValue">
-                      Discount {discountType === "fixed" ? "($)" : "(%)"}
-                    </label>
-                    <Input
-                      id="discountValue"
-                      type="number"
-                      step={discountType === "percentage" ? "1" : "0.01"}
-                      min="0"
-                      max={discountType === "percentage" ? "100" : undefined}
-                      value={discountValue}
-                      onChange={(e) => setDiscountValue(e.target.value)}
-                      placeholder="0"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Stock Control Section */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">
-                Stock Control
-              </h3>
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label htmlFor="stock">Initial Stock</label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    min="0"
-                    value={stock}
-                    onChange={(e) => setStock(e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="minStockAlert">Min-Stock Alert</label>
-                  <Input
-                    id="minStockAlert"
-                    type="number"
-                    min="0"
-                    value={minStockAlert}
-                    onChange={(e) => setMinStockAlert(e.target.value)}
-                    placeholder="5"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label>Expiry Date (Optional)</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal bg-transparent",
-                        !expiryDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {expiryDate ? format(expiryDate, "PPP") : "Select expiry date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={expiryDate}
-                      onSelect={setExpiryDate}
-                      initialFocus
-                      disabled={(date) => date < new Date()}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-          </form>
-        </ScrollArea>
-
-        <DialogFooter className="gap-2 px-6 pb-6 sm:gap-0">
+        <DialogFooter className="gap-2 px-6 pb-6 sm:gap-2">
           <Button type="button" variant="outline" onClick={handleClose}>
             Cancel
           </Button>
           <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!name || !barcode || !priceUSD || !costUSD || !category}
+            type="submit"
+            form="add-product-form"
+            disabled={loading}
           >
-            Add Product
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {loading ? "Saving..." : "Add Product"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

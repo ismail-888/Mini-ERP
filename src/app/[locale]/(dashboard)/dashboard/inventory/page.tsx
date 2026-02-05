@@ -7,7 +7,7 @@ import { Button } from "~/components/ui/button"
 import { ProductTable } from "~/components/dashboard/inventory/product-table"
 import { AddProductDialog } from "~/components/dashboard/inventory/add-product-dialog"
 import { ImportExcelModal } from "~/components/dashboard/inventory/import-excel-modal"
-// import { AddProductDrawer } from "~/components/inventory/add-product-drawer" // Import AddProductDrawer
+
 import { mockProducts, categories, brands } from "~/lib/mock-data"
 import type { Product } from "~/lib/types"
 import {
