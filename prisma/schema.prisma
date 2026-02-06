@@ -43,6 +43,12 @@ model Product {
     
     costPriceUSD    Float    @default(0)
     salePriceUSD    Float    @default(0)
+
+    // --- حقول الخصم  ---
+    discountValue     Float?    @default(0)
+    discountType      String?   @default("fixed") // "fixed" أو "percentage"
+    discountStartDate DateTime?
+    discountEndDate   DateTime?
     
     currentStock    Int      @default(0)
     minStockAlert   Int      @default(5)
@@ -84,6 +90,9 @@ model SaleItem {
     productId String
     quantity  Int
     priceUSD  Float   // السعر الذي تم البيع به (لحفظ التاريخ)
+
+    // أضف هذا الحقل لتعرف كم وفر الزبون أو كم كان الخصم وقتها
+    discountApplied Float @default(0)
     
     sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
     product   Product @relation(fields: [productId], references: [id])

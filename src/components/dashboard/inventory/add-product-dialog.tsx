@@ -64,7 +64,7 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
 
   const { convertToLBP, formatLBP } = useExchangeRate();
 
-  const form = useForm<ProductFormValues>({
+  const form = useForm({
     resolver: zodResolver(ProductSchema),
     defaultValues: {
       name: "",
@@ -75,16 +75,16 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
       salePriceUSD: 0,
       currentStock: 0,
       minStockAlert: 5,
+      // الحقول الجديدة
+      discountValue: 0,
+      discountType: "fixed",
+      discountStartDate: null,
+      discountEndDate: null,
+      expiryDate: null,
     },
   });
 
-  const {
-    handleSubmit,
-    control,
-    watch,
-    reset,
-    setValue,
-  } = form;
+  const { handleSubmit, control, watch, reset, setValue } = form;
 
   const resetForm = () => {
     reset();
@@ -105,22 +105,23 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
     try {
       setLoading(true);
 
-      // نستخدم spread operator لنقل كل القيم من values (الاسم، السعر، المخزون، وتاريخ الانتهاء)
-      // ونضيف عليها الصورة من الـ state المحلي (imagePreview)
       const result = await createProductAction({
         ...values,
+        // معالجة الحقول التي قد تكون نصاً فارغاً لتخزينها كـ undefined/null في قاعدة البيانات
+        barcode: values.barcode ?? undefined,
+        brand: values.brand ?? undefined,
+        // إضافة الصورة من الـ state المحلي
         image: imagePreview ?? undefined,
       });
 
       if (result.success) {
         toast.success("تم إضافة المنتج بنجاح");
-        handleClose(); // هذه الدالة تقوم بعمل reset للفورم وإغلاق الـ Dialog
+        handleClose();
       } else {
-        // في حال وجود خطأ من السيرفر (مثل باركود مكرر)
         toast.error(result.error);
       }
     } catch (error) {
-      // خطأ غير متوقع في الاتصال أو السيرفر
+      console.error("Submit Error:", error);
       toast.error("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً");
     } finally {
       setLoading(false);
@@ -171,6 +172,17 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
   const price = watch("salePriceUSD") ?? 0;
   const profitMargin = cost > 0 ? ((price - cost) / cost) * 100 : 0;
 
+ // Calculate Final Price after Discount (safe coercion + clamp)
+  const discountType = watch("discountType");
+  const discountValue = Number(watch("discountValue") ?? 0) || 0;
+
+  let finalPrice =
+    discountType === "percentage"
+      ? price - price * (discountValue / 100)
+      : price - discountValue;
+
+  finalPrice = Math.max(0, Number.isNaN(finalPrice) ? price : finalPrice);
+
   return (
     <Dialog
       open={open}
@@ -178,8 +190,8 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
         if (!open) handleClose();
       }}
     >
-      <DialogContent className="w-[95vw] sm:max-w-2xl md:max-w-4xl max-h-[calc(100vh-2rem)] p-0 flex flex-col">
-        <DialogHeader className="px-6 pt-6 relative">
+      <DialogContent className="flex max-h-[calc(100vh-2rem)] w-[95vw] flex-col p-0 sm:max-w-2xl md:max-w-4xl">
+        <DialogHeader className="relative px-6 pt-6">
           <DialogTitle>Add New Product</DialogTitle>
           <DialogDescription>
             Fill in all the product details. Fields marked with * are required.
@@ -198,7 +210,11 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
 
         <div className="flex-1 overflow-auto px-6 pb-4">
           <Form {...form}>
-            <form id="add-product-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form
+              id="add-product-form"
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-6"
+            >
               {/* Image Upload */}
               <div className="space-y-2">
                 <label>Product Image</label>
@@ -208,11 +224,13 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                   onDrop={handleDrop}
                   className={cn(
                     "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
-                    isDragging ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground",
+                    isDragging
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-muted-foreground",
                     imagePreview && "border-solid",
                   )}
                 >
-                {imagePreview ? (
+                  {imagePreview ? (
                     <div className="relative">
                       <img
                         src={imagePreview ?? "/placeholder.svg"}
@@ -221,7 +239,7 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                       />
                       <button
                         type="button"
-                      onClick={clearImage}
+                        onClick={clearImage}
                         className="bg-destructive text-destructive-foreground absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full"
                       >
                         <X className="h-4 w-4" />
@@ -232,9 +250,19 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                       <div className="bg-muted mb-2 flex h-12 w-12 items-center justify-center rounded-full">
                         <ImageIcon className="text-muted-foreground h-6 w-6" />
                       </div>
-                      <p className="text-sm font-medium">Drag & drop image here</p>
-                      <p className="text-muted-foreground mt-1 text-xs">or click to browse</p>
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="absolute inset-0 cursor-pointer opacity-0" />
+                      <p className="text-sm font-medium">
+                        Drag & drop image here
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        or click to browse
+                      </p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="absolute inset-0 cursor-pointer opacity-0"
+                      />
                     </>
                   )}
                 </div>
@@ -242,7 +270,9 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
 
               {/* Basic Info Section */}
               <div className="space-y-4">
-                <h3 className="text-foreground text-sm font-semibold">Basic Info</h3>
+                <h3 className="text-foreground text-sm font-semibold">
+                  Basic Info
+                </h3>
                 <Separator />
 
                 <FormField
@@ -252,7 +282,11 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                     <FormItem>
                       <FormLabel>Product Name *</FormLabel>
                       <FormControl>
-                        <Input id="name" placeholder="Enter product name" {...field} />
+                        <Input
+                          id="name"
+                          placeholder="Enter product name"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -267,9 +301,21 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                       <FormLabel>Barcode (Optional)</FormLabel>
                       <div className="flex gap-2">
                         <FormControl>
-                          <Input id="barcode" placeholder="Scan or leave empty to auto-generate" className="flex-1" {...field} />
+                          <Input
+                            id="barcode"
+                            placeholder="Scan or leave empty to auto-generate"
+                            className="flex-1"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
                         </FormControl>
-                        <Button type="button" variant="outline" size="icon" onClick={generateRandomBarcode} title="Generate Barcode">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={generateRandomBarcode}
+                          title="Generate Barcode"
+                        >
                           <ScanBarcode className="h-4 w-4" />
                         </Button>
                       </div>
@@ -277,7 +323,7 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                   )}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <FormField
                       control={control}
@@ -286,7 +332,10 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                         <FormItem>
                           <FormLabel>Brand</FormLabel>
                           <FormControl>
-                            <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                            <Select
+                              value={field.value ?? ""}
+                              onValueChange={field.onChange}
+                            >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select brand" />
                               </SelectTrigger>
@@ -313,7 +362,10 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                         <FormItem>
                           <FormLabel>Category *</FormLabel>
                           <FormControl>
-                            <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                            <Select
+                              value={field.value ?? ""}
+                              onValueChange={field.onChange}
+                            >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select category" />
                               </SelectTrigger>
@@ -336,25 +388,44 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
 
               {/* Pricing Section */}
               <div className="space-y-4">
-                <h3 className="text-foreground text-sm font-semibold">Pricing</h3>
+                <h3 className="text-foreground text-sm font-semibold">
+                  Pricing
+                </h3>
                 <Separator />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <FormField
                     control={control}
                     name="costPriceUSD"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Cost Price (USD) *</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">$</span>
-                          <Input id="costUSD" type="number" step="0.01" min="0" placeholder="0.00" className="pl-7" {...field} onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
+                        <FormControl>
+                          <div className="relative">
+                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">
+                              $
+                            </span>
+                            <Input
+                              id="costUSD"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              className="pl-7"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value === ""
+                                    ? ""
+                                    : Number(e.target.value),
+                                )
+                              }
+                            />
+                          </div>
+                        </FormControl>
+                        <div className="mt-1 flex min-h-[48px] items-center">
+                          <FormMessage />
                         </div>
-                      </FormControl>
-                      <div className="mt-1 min-h-[48px] flex items-center">
-                        <FormMessage />
-                      </div>
                       </FormItem>
                     )}
                   />
@@ -367,41 +438,259 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                         <FormLabel>Sale Price (USD) *</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">$</span>
-                            <Input id="priceUSD" type="number" step="0.01" min="0" placeholder="0.00" className="pl-7" {...field} onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value))} />
+                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">
+                              $
+                            </span>
+                            <Input
+                              id="priceUSD"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              className="pl-7"
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value === ""
+                                    ? ""
+                                    : Number(e.target.value),
+                                )
+                              }
+                            />
                           </div>
                         </FormControl>
-                        <div className="mt-1 min-h-[48px] flex flex-col justify-center">
-                          {price > 0 && <p className="text-xs font-bold text-green-600">≈ {formatLBP(convertToLBP(price))}</p>}
+                        <div className="mt-1 flex min-h-[48px] flex-col justify-center">
+                          {price > 0 && (
+                            <p className="text-xs font-bold text-green-600">
+                              ≈ {formatLBP(convertToLBP(price))}
+                            </p>
+                          )}
                           <FormMessage />
                         </div>
                       </FormItem>
                     )}
                   />
 
-                  {/* Profit row: span both columns so it aligns with inputs */}
+                  {/* Profit & Final Price Preview */}
                   {cost > 0 && price > 0 && (
                     <div className="col-span-1 sm:col-span-2">
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <p className="text-muted-foreground text-sm">
-                          Profit Margin:{" "}
-                          <span className={cn("font-semibold", profitMargin > 0 ? "text-primary" : "text-destructive")}>
+                      <div className="bg-muted/50 border-border grid grid-cols-2 gap-4 rounded-lg border p-3">
+                        <div>
+                          <p className="text-muted-foreground text-xs tracking-wider uppercase">
+                            Profit Margin
+                          </p>
+                          <p
+                            className={cn(
+                              "text-lg font-bold",
+                              profitMargin > 0
+                                ? "text-green-600"
+                                : "text-destructive",
+                            )}
+                          >
                             {profitMargin.toFixed(1)}%
-                          </span>{" "}
-                          (${(price - cost).toFixed(2)} per unit)
-                        </p>
+                            <span className="text-muted-foreground ml-1 text-xs font-normal">
+                              (${(price - cost).toFixed(2)})
+                            </span>
+                          </p>
+                        </div>
+
+                        {discountValue > 0 && (
+                          <div className="border-l pl-4 text-right">
+                            <p className="text-muted-foreground text-xs tracking-wider uppercase">
+                              Final Price
+                            </p>
+                            <p className="text-primary text-lg font-bold">
+                              ${finalPrice.toFixed(2)}
+                            </p>
+                            <p className="text-[10px] font-bold text-green-600">
+                              ≈ {formatLBP(convertToLBP(finalPrice))}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
+
+                  {/* Discount fields - added per new schema */}
+                  <FormField
+                    control={control}
+                    name="discountType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Discount Type</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value ?? "fixed"}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select discount type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="fixed">
+                                Fixed Amount
+                              </SelectItem>
+                              <SelectItem value="percentage">
+                                Percentage
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name="discountValue"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Discount Value</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              id="discountValue"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max={
+                                watch("discountType") === "percentage"
+                                  ? 100
+                                  : undefined
+                              }
+                              placeholder={
+                                watch("discountType") === "percentage"
+                                  ? "0 - 100"
+                                  : "0.00"
+                              }
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value === ""
+                                    ? ""
+                                    : Number(e.target.value),
+                                )
+                              }
+                              className={cn(
+                                watch("discountType") === "percentage"
+                                  ? "pr-10"
+                                  : "",
+                              )}
+                            />
+                            {watch("discountType") === "percentage" && (
+                              <span className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 text-sm">
+                                %
+                              </span>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name="discountStartDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Date (optional)</FormLabel>
+                        <FormControl>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start bg-transparent text-left font-normal",
+                                  !field.value && "text-muted-foreground",
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value
+                                  ? format(field.value, "PPP")
+                                  : "Select start date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={field.value ?? undefined}
+                                onSelect={(date) =>
+                                  field.onChange(date ?? null)
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name="discountEndDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date (optional)</FormLabel>
+                        <FormControl>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start bg-transparent text-left font-normal",
+                                  !field.value && "text-muted-foreground",
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value
+                                  ? format(field.value, "PPP")
+                                  : "Select end date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={field.value ?? undefined}
+                                onSelect={(date) =>
+                                  field.onChange(date ?? null)
+                                }
+                                initialFocus
+                                disabled={(date) => {
+                                  const start = watch("discountStartDate");
+                                  if (start) {
+                                    return date < new Date(start);
+                                  }
+                                  return false;
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </div>
 
               {/* Stock Control Section */}
               <div className="space-y-4">
-                <h3 className="text-foreground text-sm font-semibold">Stock Control</h3>
+                <h3 className="text-foreground text-sm font-semibold">
+                  Stock Control
+                </h3>
                 <Separator />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <FormField
                     control={control}
                     name="currentStock"
@@ -409,7 +698,16 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                       <FormItem>
                         <FormLabel>Initial Stock</FormLabel>
                         <FormControl>
-                          <Input id="stock" type="number" min="0" placeholder="0" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                          <Input
+                            id="stock"
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value))
+                            }
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -423,7 +721,16 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                       <FormItem>
                         <FormLabel>Min-Stock Alert</FormLabel>
                         <FormControl>
-                          <Input id="minStockAlert" type="number" min="0" placeholder="5" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                          <Input
+                            id="minStockAlert"
+                            type="number"
+                            min="0"
+                            placeholder="5"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value))
+                            }
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -442,10 +749,15 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className={cn("w-full justify-start bg-transparent text-left font-normal", !field.value && "text-muted-foreground")}
+                              className={cn(
+                                "w-full justify-start bg-transparent text-left font-normal",
+                                !field.value && "text-muted-foreground",
+                              )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, "PPP") : "Select expiry date"}
+                              {field.value
+                                ? format(field.value, "PPP")
+                                : "Select expiry date"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -471,11 +783,7 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
           <Button type="button" variant="outline" onClick={handleClose}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            form="add-product-form"
-            disabled={loading}
-          >
+          <Button type="submit" form="add-product-form" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {loading ? "Saving..." : "Add Product"}
           </Button>
