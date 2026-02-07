@@ -147,3 +147,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* لإخفاء الرسائل المزعجة للمكتبة وتجميل الفيديو */
+#reader video {
+  object-fit: cover !important;
+  border-radius: 0.5rem;
+}
+
+#reader img {
+  /* إخفاء أيقونة الكاميرا الافتراضية للمكتبة */
+  display: none !important;
+}
+
+/* إخفاء أزرار المكتبة الأصلية لأننا نتحكم بها برمجياً */
+#reader button, #reader span {
+  display: none !important;
+}

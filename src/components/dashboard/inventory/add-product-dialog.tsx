@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 
-import { X, ImageIcon, ScanBarcode, CalendarIcon, Loader2 } from "lucide-react";
+import { X, ImageIcon, ScanBarcode, CalendarIcon, Loader2, Camera } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import {
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 import {
   Select,
@@ -41,6 +42,7 @@ import {
   ProductSchema,
   type ProductFormValues,
 } from "~/lib/validations/product";
+import { type Product } from "~/lib/types";
 import {
   Form,
   FormField,
@@ -53,14 +55,18 @@ import {
 interface AddProductDialogProps {
   open: boolean;
   onClose: () => void;
+  onAdd?: (product: Product) => void;
 }
 
-export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
+
+export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   // expiryDate is now managed inside the react-hook-form state (see schema)
   const [isDragging, setIsDragging] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   const { convertToLBP, formatLBP } = useExchangeRate();
 
@@ -91,7 +97,115 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
     setImagePreview(null);
   };
 
+  const startScanning = () => {
+    // toggle UI; actual scanner initialization happens in the effect that waits
+    // for the reader element to mount to the DOM.
+    setIsScanning(true);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const initScanner = async () => {
+      // wait for the reader element to be present (max ~1s)
+      const start = Date.now();
+      while (mounted && !document.getElementById("reader") && Date.now() - start < 1000) {
+        // small delay to avoid spamming the console
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      if (!mounted) return;
+
+      const el = document.getElementById("reader");
+      if (!el) {
+        console.error("Scanner start error: HTML Element with id=reader not found");
+        toast.error("Unable to start camera (no reader element).");
+        setIsScanning(false);
+        return;
+      }
+
+      try {
+        const scanner = new Html5QrcodeScanner(
+          "reader",
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 150 },
+          },
+          false,
+        );
+
+        scannerRef.current = scanner;
+
+        scanner.render(
+          (decodedText: string) => {
+            setValue("barcode", decodedText, { shouldValidate: true });
+            toast.success("Scanned: " + decodedText);
+            void (async () => {
+              try {
+                await scanner.clear();
+              } catch {
+                // ignore
+              }
+              scannerRef.current = null;
+              setIsScanning(false);
+            })();
+          },
+          () => {
+            // ignore frame errors
+          },
+        );
+      } catch (err) {
+        // initialization errors
+        console.error("Scanner start error:", err);
+        toast.error("Unable to start camera. Check permissions.");
+        setIsScanning(false);
+      }
+    };
+
+    if (isScanning) {
+      void initScanner();
+    }
+
+    return () => {
+      mounted = false;
+    };
+    // only depends on isScanning
+  }, [isScanning, setValue]);
+
+  const stopScanning = async () => {
+    const scanner = scannerRef.current;
+    if (!scanner) {
+      setIsScanning(false);
+      return;
+    }
+
+    try {
+      // Html5QrcodeScanner exposes clear() which returns a promise
+      await scanner.clear();
+    } catch (err) {
+      // best-effort cleanup
+      console.warn("Error clearing scanner", err);
+    } finally {
+      scannerRef.current = null;
+      setIsScanning(false);
+    }
+  };
+ 
+  useEffect(() => {
+    // when dialog closes, ensure scanner is stopped
+    if (!open) {
+      void stopScanning();
+    }
+    // cleanup on unmount
+    return () => {
+      void stopScanning();
+    };
+ 
+  }, [open]);
+
   const handleClose = () => {
+    // ensure scanner is stopped when dialog closes
+    void stopScanning();
     resetForm();
     onClose();
   };
@@ -116,6 +230,13 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
 
       if (result.success) {
         toast.success("تم إضافة المنتج بنجاح");
+        // notify parent so it can prepend the new product to the table
+        try {
+          if (result.data && onAdd) onAdd(result.data);
+        } catch (err) {
+          // ignore parent handler errors
+          console.warn("onAdd handler threw:", err);
+        }
         handleClose();
       } else {
         toast.error(result.error);
@@ -167,12 +288,9 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Calculate profit margin
+  // Calculate pricing values
   const cost = watch("costPriceUSD") ?? 0;
   const price = watch("salePriceUSD") ?? 0;
-  const profitMargin = cost > 0 ? ((price - cost) / cost) * 100 : 0;
-
- // Calculate Final Price after Discount (safe coercion + clamp)
   const discountType = watch("discountType");
   const discountValue = Number(watch("discountValue") ?? 0) || 0;
 
@@ -182,6 +300,9 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
       : price - discountValue;
 
   finalPrice = Math.max(0, Number.isNaN(finalPrice) ? price : finalPrice);
+
+  // Profit margin should be calculated from the effective final price (after discount)
+  const profitMargin = cost > 0 ? ((finalPrice - cost) / cost) * 100 : 0;
 
   return (
     <Dialog
@@ -307,6 +428,12 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                             className="flex-1"
                             {...field}
                             value={field.value ?? ""}
+                          onKeyDown={(e) => {
+                            // prevent Enter from submitting when using physical barcode scanners
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                            }
+                          }}
                           />
                         </FormControl>
                         <Button
@@ -318,10 +445,42 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                         >
                           <ScanBarcode className="h-4 w-4" />
                         </Button>
+                      <Button
+                        type="button"
+                        variant={isScanning ? "destructive" : "outline"}
+                        size="icon"
+                        onClick={() => {
+                          if (isScanning) void stopScanning();
+                          else startScanning();
+                        }}
+                        title="Use Camera"
+                      >
+                        <Camera className="h-4 w-4" />
+                      </Button>
                       </div>
                     </FormItem>
                   )}
                 />
+
+              {/* Camera reader — appears only when scanning */}
+              {isScanning && (
+                <div className="mt-3">
+                  <div
+                    id="reader"
+                    className="mx-auto w-full max-w-md overflow-hidden rounded-lg border bg-black/5"
+                    style={{ aspectRatio: "4/3" }}
+                  />
+                  <div className="mt-2 flex justify-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={stopScanning}
+                    >
+                      Stop Scanner
+                    </Button>
+                  </div>
+                </div>
+              )}
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -489,7 +648,7 @@ export function AddProductDialog({ open, onClose }: AddProductDialogProps) {
                           >
                             {profitMargin.toFixed(1)}%
                             <span className="text-muted-foreground ml-1 text-xs font-normal">
-                              (${(price - cost).toFixed(2)})
+                              (${(finalPrice - cost).toFixed(2)})
                             </span>
                           </p>
                         </div>

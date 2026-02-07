@@ -1,43 +1,23 @@
-export interface Product {
-  id: string
-  name: string
-  barcode: string
-  brand?: string
-  category: string
-  subcategory?: string
-  costUSD: number
-  priceUSD: number
-  discountType?: "fixed" | "percentage"
-  discountValue?: number
-  stock: number
-  minStockAlert: number
-  expiryDate?: string
-  image?: string
-}
+import type { Product as PrismaProduct } from "@prisma/client"
 
-export interface CartItem extends Product {
+// 1. Re-export the Prisma Product so you can just import { Product } from "~/lib/types"
+export type Product = PrismaProduct
+
+// 2. Define types that ONLY exist in the UI/Frontend
+export interface CartItem extends PrismaProduct {
   quantity: number
-  lineDiscount?: number
-}
-
-export interface Shop {
-  id: string
-  name: string
-  owner: string
-  email: string
-  subscriptionExpiry: string
-  status: "active" | "suspended"
-  productsCount: number
-  salesThisMonth: number
-}
-
-export interface ExchangeRate {
-  usdToLBP: number
-  lastUpdated: string
+  lineTotalUSD: number
 }
 
 export interface PaymentBreakdown {
   cashUSD: number
   cashLBP: number
-  card: number
+  cardUSD: number
+}
+
+// 3. Define types for your Server Action responses
+export type ActionResponse<T> = {
+  success: boolean
+  data?: T
+  error?: string
 }

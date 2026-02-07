@@ -35,6 +35,10 @@ export async function createProductAction(data: {
   try {
     let imageUrl: string | null = null;
 
+    // تنظيف البيانات المدخلة
+    const cleanBarcode = data.barcode?.trim() ?? null;
+    const cleanName = data.name.trim()
+
     // 1. معالجة الصورة
     if (data.image?.startsWith("data:image")) {
       try {
@@ -65,8 +69,8 @@ export async function createProductAction(data: {
     // 2. حفظ المنتج مع بيانات الخصم
     const product = await db.product.create({
       data: {
-        name: data.name,
-        barcode: data.barcode ?? null,
+        name: cleanName,
+        barcode: cleanBarcode,
         category: data.category,
         brand: data.brand ?? null,
         costPriceUSD: data.costPriceUSD,
