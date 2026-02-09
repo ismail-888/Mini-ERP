@@ -88,7 +88,7 @@ export function AppSidebar({
                 <span className="font-black text-lg">M</span>
               </div>
               <div className="flex flex-col gap-0.5 leading-none px-2 group-data-[collapsible=icon]:hidden">
-                <span className="text-sm font-bold tracking-tight uppercase italic text-primary">Mousaheb</span>
+                <span className="text-sm font-bold tracking-tight uppercase text-primary">Mousaheb</span>
                 <span className="text-[10px] font-medium text-muted-foreground/70">v1.0.0</span>
               </div>
             </SidebarMenuButton>

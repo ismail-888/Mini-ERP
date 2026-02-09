@@ -90,7 +90,7 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
     },
   });
 
-  const { handleSubmit, control, watch, reset, setValue } = form;
+  const { handleSubmit, control, watch, reset, setValue, setFocus } = form;
 
   const resetForm = () => {
     reset();
@@ -240,6 +240,14 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
         handleClose();
       } else {
         toast.error(result.error);
+        // If barcode duplicate, focus the barcode input for quick fix
+        if (typeof result.error === "string" && result.error.includes("باركود")) {
+          try {
+            setFocus("barcode");
+          } catch {
+            // ignore if setFocus not available
+          }
+        }
       }
     } catch (error) {
       console.error("Submit Error:", error);

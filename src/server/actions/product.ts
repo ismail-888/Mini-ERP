@@ -36,7 +36,8 @@ export async function createProductAction(data: {
     let imageUrl: string | null = null;
 
     // تنظيف البيانات المدخلة
-    const cleanBarcode = data.barcode?.trim() ?? null;
+    // Treat empty/whitespace-only barcode as null to avoid duplicate empty-string entries
+    const cleanBarcode = data.barcode?.trim() || null;
     const cleanName = data.name.trim()
 
     // 1. معالجة الصورة
@@ -67,6 +68,13 @@ export async function createProductAction(data: {
     }
 
     // 2. حفظ المنتج مع بيانات الخصم
+    // If barcode provided (non-null) ensure it's unique for this user
+    if (cleanBarcode) {
+      const exists = await db.product.findFirst({ where: { barcode: cleanBarcode, userId: session.user.id } });
+      if (exists) {
+        return { success: false, error: "الباركود هذا موجود مسبقاً في محلك" };
+      }
+    }
     const product = await db.product.create({
       data: {
         name: cleanName,

@@ -128,16 +128,9 @@ export default function InventoryClient({ initialProducts }: InventoryClientProp
             Manage your products and stock levels
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Import Excel
-          </Button>
-          <Button onClick={() => setAddProductOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
-        </div>
+        {/* <div className="flex gap-2">
+          Buttons moved into the table header via ProductTable props
+        </div> */}
       </div>
 
       {/* Stats Dashboard */}
@@ -181,7 +174,7 @@ export default function InventoryClient({ initialProducts }: InventoryClientProp
       </div>
 
       {/* Filters Bar */}
-      <div className="mb-4 flex flex-wrap gap-3">
+      {/* <div className="mb-4 flex flex-wrap gap-3">
         <div className="relative min-w-0 flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -238,9 +231,18 @@ export default function InventoryClient({ initialProducts }: InventoryClientProp
             Clear filters <X className="ml-1 h-3 w-3" />
           </Button>
         )}
-      </div>
+      </div> */}
 
-      <ProductTable products={filteredProducts} />
+      <ProductTable
+        products={filteredProducts}
+        onAddClick={() => setAddProductOpen(true)}
+        rightActions={(
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import Excel
+          </Button>
+        )}
+      />
 
       <AddProductDialog open={addProductOpen} onClose={() => setAddProductOpen(false)} onAdd={handleAddProduct} />
       <ImportExcelModal open={importOpen} onClose={() => setImportOpen(false)} />

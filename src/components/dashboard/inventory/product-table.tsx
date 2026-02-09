@@ -9,24 +9,40 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table"
+import DataTable from "~/components/shared/Table/DataTable"
+import type { ColumnDef } from "@tanstack/react-table"
+import { useState, useRef, useEffect } from "react"
 import { useExchangeRate } from "~/contexts/exchange-rate-context"
 import type { Product } from "~/lib/types"
 import { cn } from "~/lib/utils"
 
 interface ProductTableProps {
   products: Product[]
+  onAddClick?: () => void
+  rightActions?: React.ReactNode
 }
 
-export function ProductTable({ products }: ProductTableProps) {
+export function ProductTable({ products, onAddClick, rightActions }: ProductTableProps) {
   const { formatUSD } = useExchangeRate()
+
+  // Context menu state for row double-click actions (hooks must run unconditionally)
+  const [ctxProduct, setCtxProduct] = useState<Product | null>(null)
+  const [ctxPos, setCtxPos] = useState<{ x: number; y: number } | null>(null)
+
+  const handleRowRightClick = (product: Product, e?: React.MouseEvent) => {
+    if (!e) return
+    setCtxProduct(product)
+    setCtxPos({ x: e.clientX, y: e.clientY })
+  }
+
+  useEffect(() => {
+    const handleClick = () => {
+      setCtxProduct(null)
+      setCtxPos(null)
+    }
+    window.addEventListener("click", handleClick)
+    return () => window.removeEventListener("click", handleClick)
+  }, [])
 
   if (products.length === 0) {
     return (
@@ -72,127 +88,179 @@ export function ProductTable({ products }: ProductTableProps) {
     const effectivePrice = getEffectivePrice(product)
     return ((effectivePrice - cost) / cost) * 100
   }
+ 
+  const safeString = (v: unknown, fallback = ""): string => {
+    if (v == null) return fallback
+    if (typeof v === "string") return v
+    if (typeof v === "number") return String(v)
+    try {
+      return JSON.stringify(v)
+    } catch {
+      return fallback
+    }
+  }
+ 
+  // Columns for DataTable (virtualized)
+  const columns: ColumnDef<Product>[] = [
+    {
+      id: "avatar",
+      header: "Images",
+      cell: ({ row }) => {
+        const product = row.original
+        return (
+          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted overflow-hidden">
+            {product.image ? (
+              <img src={product.image} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-sm text-muted-foreground">{product.name.charAt(0)}</span>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "name",
+      header: "Name",
+      meta: { size: "2fr", align: "start" },
+      cell: ({ getValue, row }) => {
+        const brand = row.original.brand ?? "No Brand"
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium">{String(getValue())}</span>
+            <span className="text-xs text-muted-foreground">{brand}</span>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "category",
+      header: "Category",
+      meta: { size: "1fr", align: "start" },
+      cell: ({ getValue }) => {
+        return <span className="text-sm">{safeString(getValue(), "General")}</span>
+      },
+    },
+    {
+      accessorKey: "barcode",
+      header: "Barcode",
+      meta: { size: "140px", align: "start" },
+      cell: ({ getValue }) => {
+        return <span className="font-mono text-xs text-muted-foreground">{safeString(getValue(), "—")}</span>
+      },
+    },
+    {
+      id: "stock",
+      header: "Stock",
+      meta: { size: "120px", align: "center" },
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center gap-1">
+          {getStockBadge(row.original)}
+          {row.original.currentStock <= row.original.minStockAlert && row.original.currentStock > 0 && (
+            <AlertTriangle className="h-3 w-3 text-orange-500" />
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "costPriceUSD",
+      header: "Cost",
+      meta: { size: "120px", align: "right" },
+      cell: ({ getValue }) => <span className="text-right text-sm text-muted-foreground">{formatUSD(getValue() as number)}</span>,
+    },
+    {
+      id: "price",
+      header: "Price",
+      meta: { size: "140px", align: "right" },
+      cell: ({ row }) => {
+        const effectivePrice = getEffectivePrice(row.original)
+        const hasDiscount = effectivePrice < row.original.salePriceUSD
+        return hasDiscount ? (
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-muted-foreground line-through">{formatUSD(row.original.salePriceUSD)}</span>
+            <span className="font-medium text-primary">{formatUSD(effectivePrice)}</span>
+          </div>
+        ) : (
+          <span className="font-medium">{formatUSD(row.original.salePriceUSD)}</span>
+        )
+      },
+    },
+    {
+      id: "margin",
+      header: "Margin",
+      meta: { size: "110px", align: "right" },
+      cell: ({ row }) => {
+        const margin = getProfitMargin(row.original)
+        return (
+          <span className={cn(
+            "text-sm font-medium",
+            margin > 20 ? "text-primary" : margin > 0 ? "text-orange-600" : "text-destructive"
+          )}>
+            {margin.toFixed(0)}%
+          </span>
+        )
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: () => <ActionMenu />,
+      meta: { size: "56px", align: "center" },
+    },
+  ]
+
+  // (moved to top to keep hooks unconditional)
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
-      {/* Desktop Table */}
-      <div className="hidden lg:block">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-12" />
-              <TableHead>Product</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="font-mono text-xs">Barcode</TableHead>
-              <TableHead className="text-center">Stock</TableHead>
-              <TableHead className="text-right">Cost</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Margin</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product) => {
-              const margin = getProfitMargin(product)
-              const effectivePrice = getEffectivePrice(product)
-              const hasDiscount = effectivePrice < product.salePriceUSD
+    <div className="overflow-hidden rounded-lg border border-border bg-card p-2">
+      <DataTable<Product>
+        data={products}
+        columns={columns}
+        tableName="Products"
+        onAddClick={onAddClick}
+        rightActions={rightActions}
+        rowHeight={56}
+        maxHeight={470}
+        onRowRightClick={handleRowRightClick}
+        enableRowSelection={true}
+        enablePagination={true}
+        pageSize={10}
+      />
 
-              return (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted overflow-hidden">
-                      {product.image ? (
-                        <img src={product.image} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-sm text-muted-foreground">{product.name.charAt(0)}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{product.name}</span>
-                      <span className="text-xs text-muted-foreground">{product.brand ?? "No Brand"}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">{product.category ?? "General"}</span>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {product.barcode ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      {getStockBadge(product)}
-                      {product.currentStock <= product.minStockAlert && product.currentStock > 0 && (
-                        <AlertTriangle className="h-3 w-3 text-orange-500" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">
-                    {formatUSD(product.costPriceUSD)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {hasDiscount ? (
-                      <div className="flex flex-col items-end">
-                        <span className="text-xs text-muted-foreground line-through">{formatUSD(product.salePriceUSD)}</span>
-                        <span className="font-medium text-primary">{formatUSD(effectivePrice)}</span>
-                      </div>
-                    ) : (
-                      <span className="font-medium">{formatUSD(product.salePriceUSD)}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className={cn(
-                      "text-sm font-medium",
-                      margin > 20 ? "text-primary" : margin > 0 ? "text-orange-600" : "text-destructive"
-                    )}>
-                      {margin.toFixed(0)}%
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <ActionMenu />
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="divide-y divide-border lg:hidden">
-        {products.map((product) => {
-          const margin = getProfitMargin(product)
-          const effectivePrice = getEffectivePrice(product)
-
-          return (
-            <div key={product.id} className="flex items-start gap-3 p-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted">
-                <span className="text-lg text-muted-foreground">{product.name.charAt(0)}</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="truncate font-medium">{product.name}</h3>
-                    <p className="text-xs text-muted-foreground">{product.brand ?? "No Brand"}</p>
-                  </div>
-                  <ActionMenu />
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  {getStockBadge(product)}
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {margin.toFixed(0)}% margin
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                   <span className="text-xs text-muted-foreground">Cost: {formatUSD(product.costPriceUSD)}</span>
-                   <span className="font-bold text-primary">{formatUSD(effectivePrice)}</span>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      {/* Context menu for row double-click */}
+      {ctxProduct && ctxPos && (
+        <div
+          className="z-50 rounded-md border bg-card p-2 shadow-md"
+          style={{
+            position: "fixed",
+            left: ctxPos.x,
+            top: ctxPos.y,
+            transform: "translate(8px, 8px)",
+            minWidth: 160,
+          }}
+          onClick={(e) => {
+            e.stopPropagation()
+          }}
+        >
+          <button
+            className="w-full text-left px-3 py-2 hover:bg-muted rounded"
+            onClick={() => {
+              console.log("Edit", ctxProduct)
+              setCtxProduct(null)
+            }}
+          >
+            Edit
+          </button>
+          <button
+            className="w-full text-left px-3 py-2 text-destructive hover:bg-muted rounded"
+            onClick={() => {
+              console.log("Delete", ctxProduct)
+              setCtxProduct(null)
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   )
 }

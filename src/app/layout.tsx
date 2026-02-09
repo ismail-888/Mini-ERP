@@ -1,9 +1,9 @@
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Geist } from "next/font/google";
-
 import { TRPCReactProvider } from "~/trpc/react";
+import { Geist } from "next/font/google";
+import ToasterProvider from "~/components/shared/ToasterProvider";
 
 export const metadata: Metadata = {
   title: "Mousaheb",
@@ -23,6 +23,11 @@ export default function RootLayout({
 }) {
   // لا تضع <html> أو <body> هنا لتجنب التكرار مع layouts المجلدات الفرعية
   return (
-    <TRPCReactProvider>{children}</TRPCReactProvider>
+    <TRPCReactProvider>
+      <div className={geist.variable}>
+        {children}
+        <ToasterProvider />
+      </div>
+    </TRPCReactProvider>
   );
 }
