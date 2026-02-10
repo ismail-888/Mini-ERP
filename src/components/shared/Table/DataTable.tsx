@@ -30,6 +30,10 @@ type DataTableProps<TData> = {
   onAddClick?: () => void;
   rightActions?: React.ReactNode;
   onRowRightClick?: (row: TData, e?: React.MouseEvent) => void;
+  /** Called when a user double-clicks a row */
+  onRowDoubleClick?: (row: TData) => void;
+  /** Called with an array of ids when the user confirms bulk delete from the UI */
+  onBulkDelete?: (ids: string[]) => void | Promise<void>;
   /**
    * Estimated/fixed row height in px. If you want the virtualizer to
    * measure rows dynamically, omit this prop. Default: 50
@@ -99,12 +103,14 @@ export function DataTable<TData>({
   onAddClick,
   rightActions,
   onRowRightClick,
+  onRowDoubleClick,
   rowHeight = 50,
   maxHeight = 600,
   enableRowSelection = false,
   enablePagination = false,
   pageSize = 25,
   pageSizeOptions = [10, 25, 50, 100],
+  onBulkDelete,
 }: DataTableProps<TData>) {
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>([]);
@@ -215,11 +221,25 @@ export function DataTable<TData>({
   // selected rows for bulk actions
   const selectedCount = table.getSelectedRowModel().rows.length
   const handleClearSelection = React.useCallback(() => table.resetRowSelection(), [table])
-  const handleDeleteSelected = React.useCallback(() => {
+  const handleDeleteSelected = React.useCallback(async () => {
     const selected = table.getSelectedRowModel().rows.map((r) => r.original)
-    console.log("Delete selected:", selected)
-    table.resetRowSelection()
-  }, [table])
+    const ids = selected
+      .map((s) => (s as any)?.id)
+      .filter((id): id is string => typeof id === "string")
+
+    if (ids.length === 0) {
+      table.resetRowSelection()
+      return
+    }
+
+    try {
+      if (onBulkDelete) {
+        await Promise.resolve(onBulkDelete(ids))
+      }
+    } finally {
+      table.resetRowSelection()
+    }
+  }, [table, onBulkDelete])
 
   return (
     <div className="w-full space-y-3">
@@ -330,6 +350,7 @@ export function DataTable<TData>({
                             e.preventDefault();
                             onRowRightClick?.(row.original, e);
                           }}
+                          onDoubleClick={() => onRowDoubleClick?.(row.original)}
                           className="border-b border-border hover:bg-muted/50"
                         >
                           {row.getVisibleCells().map((cell) => {

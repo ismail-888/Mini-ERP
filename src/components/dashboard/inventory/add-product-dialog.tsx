@@ -2,7 +2,14 @@
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 
-import { X, ImageIcon, ScanBarcode, CalendarIcon, Loader2, Camera } from "lucide-react";
+import {
+  ImageIcon,
+  ScanBarcode,
+  CalendarIcon,
+  Loader2,
+  Camera,
+  X,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +41,7 @@ import { categories, brands } from "~/lib/mock-data";
 import { cn } from "~/lib/utils";
 import { format } from "date-fns";
 import { createProductAction } from "~/server/actions/product";
+import { updateProductAction } from "~/server/actions/get-products";
 import { useExchangeRate } from "~/contexts/exchange-rate-context";
 import { toast } from "sonner";
 import { useForm, type SubmitHandler } from "react-hook-form";
@@ -56,37 +64,52 @@ interface AddProductDialogProps {
   open: boolean;
   onClose: () => void;
   onAdd?: (product: Product) => void;
+  product?: Product; // Optional product for edit mode
+  onEdit?: (product: Product) => void; // Callback after editing
+  isLoading?: boolean; // Loading state when fetching product data for edit
+  mode?: "add" | "edit"; // explicitly force mode (useful while loading)
 }
 
-
-export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps) {
+export function AddProductDialog({ 
+  open, 
+  onClose, 
+  onAdd, 
+  product,
+  onEdit,
+  isLoading,
+  mode = "add",
+}: AddProductDialogProps) {
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  // expiryDate is now managed inside the react-hook-form state (see schema)
   const [isDragging, setIsDragging] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
+  const isEditMode = mode === "edit" || !!product;
   const { convertToLBP, formatLBP } = useExchangeRate();
 
   const form = useForm({
     resolver: zodResolver(ProductSchema),
     defaultValues: {
-      name: "",
-      barcode: "",
-      brand: "",
-      category: "",
-      costPriceUSD: 0,
-      salePriceUSD: 0,
-      currentStock: 0,
-      minStockAlert: 5,
-      // الحقول الجديدة
-      discountValue: 0,
-      discountType: "fixed",
-      discountStartDate: null,
-      discountEndDate: null,
-      expiryDate: null,
+      name: product?.name ?? "",
+      barcode: product?.barcode ?? "",
+      brand: product?.brand ?? "",
+      category: product?.category ?? "",
+      costPriceUSD: product?.costPriceUSD ?? 0,
+      salePriceUSD: product?.salePriceUSD ?? 0,
+      currentStock: product?.currentStock ?? 0,
+      minStockAlert: product?.minStockAlert ?? 5,
+      discountValue: product?.discountValue ?? 0,
+      discountType:
+        (product?.discountType as "fixed" | "percentage") ?? "fixed",
+      discountStartDate: product?.discountStartDate
+        ? new Date(product.discountStartDate)
+        : null,
+      discountEndDate: product?.discountEndDate
+        ? new Date(product.discountEndDate)
+        : null,
+      expiryDate: product?.expiryDate ? new Date(product.expiryDate) : null,
     },
   });
 
@@ -96,6 +119,43 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
     reset();
     setImagePreview(null);
   };
+
+  // Initialize image preview for edit mode
+  useEffect(() => {
+    if (isEditMode && product?.image) {
+      setImagePreview(product.image);
+    } else if (!isEditMode) {
+      setImagePreview(null);
+    }
+  }, [isEditMode, product]);
+
+  // Reset form when product changes (for edit mode)
+  useEffect(() => {
+    if (product) {
+      reset({
+        name: product.name ?? "",
+        barcode: product.barcode ?? "",
+        brand: product.brand ?? "",
+        category: product.category ?? "",
+        costPriceUSD: product.costPriceUSD ?? 0,
+        salePriceUSD: product.salePriceUSD ?? 0,
+        currentStock: product.currentStock ?? 0,
+        minStockAlert: product.minStockAlert ?? 5,
+        discountValue: product.discountValue ?? 0,
+        discountType:
+          (product.discountType as "fixed" | "percentage") ?? "fixed",
+        discountStartDate: product.discountStartDate
+          ? new Date(product.discountStartDate)
+          : null,
+        discountEndDate: product.discountEndDate
+          ? new Date(product.discountEndDate)
+          : null,
+        expiryDate: product.expiryDate ? new Date(product.expiryDate) : null,
+      });
+    } else if (!isEditMode && open) {
+      resetForm();
+    }
+  }, [product, isEditMode, open, reset]);
 
   const startScanning = () => {
     // toggle UI; actual scanner initialization happens in the effect that waits
@@ -109,7 +169,11 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
     const initScanner = async () => {
       // wait for the reader element to be present (max ~1s)
       const start = Date.now();
-      while (mounted && !document.getElementById("reader") && Date.now() - start < 1000) {
+      while (
+        mounted &&
+        !document.getElementById("reader") &&
+        Date.now() - start < 1000
+      ) {
         // small delay to avoid spamming the console
         await new Promise((r) => setTimeout(r, 100));
       }
@@ -118,7 +182,9 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
 
       const el = document.getElementById("reader");
       if (!el) {
-        console.error("Scanner start error: HTML Element with id=reader not found");
+        console.error(
+          "Scanner start error: HTML Element with id=reader not found",
+        );
         toast.error("Unable to start camera (no reader element).");
         setIsScanning(false);
         return;
@@ -190,7 +256,7 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
       setIsScanning(false);
     }
   };
- 
+
   useEffect(() => {
     // when dialog closes, ensure scanner is stopped
     if (!open) {
@@ -200,7 +266,6 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
     return () => {
       void stopScanning();
     };
- 
   }, [open]);
 
   const handleClose = () => {
@@ -219,33 +284,66 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
     try {
       setLoading(true);
 
-      const result = await createProductAction({
-        ...values,
-        // معالجة الحقول التي قد تكون نصاً فارغاً لتخزينها كـ undefined/null في قاعدة البيانات
-        barcode: values.barcode ?? undefined,
-        brand: values.brand ?? undefined,
-        // إضافة الصورة من الـ state المحلي
-        image: imagePreview ?? undefined,
-      });
+      if (isEditMode && product?.id) {
+        // EDIT MODE: Call updateProductAction
+        const result = await updateProductAction(product.id, {
+          ...values,
+          barcode: values.barcode ?? undefined,
+          brand: values.brand ?? undefined,
+          image: imagePreview ?? undefined,
+        });
 
-      if (result.success) {
-        toast.success("تم إضافة المنتج بنجاح");
-        // notify parent so it can prepend the new product to the table
-        try {
-          if (result.data && onAdd) onAdd(result.data);
-        } catch (err) {
-          // ignore parent handler errors
-          console.warn("onAdd handler threw:", err);
+        if (result.success) {
+          toast.success("تم تحديث المنتج بنجاح");
+          if (result.data && onEdit) {
+            try {
+              onEdit(result.data);
+            } catch (err) {
+              console.warn("onEdit handler threw:", err);
+            }
+          }
+          handleClose();
+        } else {
+          toast.error(result.error);
+          if (
+            typeof result.error === "string" &&
+            result.error.includes("باركود")
+          ) {
+            try {
+              setFocus("barcode");
+            } catch {
+              // ignore
+            }
+          }
         }
-        handleClose();
       } else {
-        toast.error(result.error);
-        // If barcode duplicate, focus the barcode input for quick fix
-        if (typeof result.error === "string" && result.error.includes("باركود")) {
+        // ADD MODE: Call createProductAction
+        const result = await createProductAction({
+          ...values,
+          barcode: values.barcode ?? undefined,
+          brand: values.brand ?? undefined,
+          image: imagePreview ?? undefined,
+        });
+
+        if (result.success) {
+          toast.success("تم إضافة المنتج بنجاح");
           try {
-            setFocus("barcode");
-          } catch {
-            // ignore if setFocus not available
+            if (result.data && onAdd) onAdd(result.data);
+          } catch (err) {
+            console.warn("onAdd handler threw:", err);
+          }
+          handleClose();
+        } else {
+          toast.error(result.error);
+          if (
+            typeof result.error === "string" &&
+            result.error.includes("باركود")
+          ) {
+            try {
+              setFocus("barcode");
+            } catch {
+              // ignore
+            }
           }
         }
       }
@@ -320,31 +418,34 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
       }}
     >
       <DialogContent className="flex max-h-[calc(100vh-2rem)] w-[95vw] flex-col p-0 sm:max-w-2xl md:max-w-4xl">
-        <DialogHeader className="relative px-6 pt-6">
-          <DialogTitle>Add New Product</DialogTitle>
+        <DialogHeader showCloseButton={true} className="relative px-6 pt-6">
+          <DialogTitle>
+            {isEditMode ? `Edit Product: ${product?.name}` : "Add New Product"}
+          </DialogTitle>
           <DialogDescription>
-            Fill in all the product details. Fields marked with * are required.
+            {isEditMode
+              ? "Update the product details. Fields marked with * are required."
+              : "Fill in all the product details. Fields marked with * are required."}
           </DialogDescription>
-
-          {/* Close button inside header so it's always visible */}
-          <button
-            type="button"
-            onClick={handleClose}
-            className="absolute top-4 right-4 rounded-xs opacity-70 hover:opacity-100"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto px-6 pb-4">
+          {isLoading && (
+            <div className="flex h-96 items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+                <p className="text-sm text-muted-foreground">Loading product data...</p>
+              </div>
+            </div>
+          )}
+          {!isLoading && (
           <Form {...form}>
             <form
               id="add-product-form"
               onSubmit={handleSubmit(onSubmit)}
               className="space-y-6"
             >
-              {/* Image Upload */}
+              {/* Image Upload/Edit */}
               <div className="space-y-2">
                 <label>Product Image</label>
                 <div
@@ -436,12 +537,12 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
                             className="flex-1"
                             {...field}
                             value={field.value ?? ""}
-                          onKeyDown={(e) => {
-                            // prevent Enter from submitting when using physical barcode scanners
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                            }
-                          }}
+                            onKeyDown={(e) => {
+                              // prevent Enter from submitting when using physical barcode scanners
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                              }
+                            }}
                           />
                         </FormControl>
                         <Button
@@ -453,42 +554,42 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
                         >
                           <ScanBarcode className="h-4 w-4" />
                         </Button>
-                      <Button
-                        type="button"
-                        variant={isScanning ? "destructive" : "outline"}
-                        size="icon"
-                        onClick={() => {
-                          if (isScanning) void stopScanning();
-                          else startScanning();
-                        }}
-                        title="Use Camera"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
+                        <Button
+                          type="button"
+                          variant={isScanning ? "destructive" : "outline"}
+                          size="icon"
+                          onClick={() => {
+                            if (isScanning) void stopScanning();
+                            else startScanning();
+                          }}
+                          title="Use Camera"
+                        >
+                          <Camera className="h-4 w-4" />
+                        </Button>
                       </div>
                     </FormItem>
                   )}
                 />
 
-              {/* Camera reader — appears only when scanning */}
-              {isScanning && (
-                <div className="mt-3">
-                  <div
-                    id="reader"
-                    className="mx-auto w-full max-w-md overflow-hidden rounded-lg border bg-black/5"
-                    style={{ aspectRatio: "4/3" }}
-                  />
-                  <div className="mt-2 flex justify-center">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={stopScanning}
-                    >
-                      Stop Scanner
-                    </Button>
+                {/* Camera reader — appears only when scanning */}
+                {isScanning && (
+                  <div className="mt-3">
+                    <div
+                      id="reader"
+                      className="mx-auto w-full max-w-md overflow-hidden rounded-lg border bg-black/5"
+                      style={{ aspectRatio: "4/3" }}
+                    />
+                    <div className="mt-2 flex justify-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={stopScanning}
+                      >
+                        Stop Scanner
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -590,7 +691,7 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
                             />
                           </div>
                         </FormControl>
-                        <div className="mt-1 flex min-h-[48px] items-center">
+                        <div className="mt-1 flex min-h-12 items-center">
                           <FormMessage />
                         </div>
                       </FormItem>
@@ -626,7 +727,7 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
                             />
                           </div>
                         </FormControl>
-                        <div className="mt-1 flex min-h-[48px] flex-col justify-center">
+                        <div className="mt-1 flex min-h-12 flex-col justify-center">
                           {price > 0 && (
                             <p className="text-xs font-bold text-green-600">
                               ≈ {formatLBP(convertToLBP(price))}
@@ -905,7 +1006,7 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
                   />
                 </div>
 
-                <FormField
+                {/* <FormField
                   control={control}
                   name="expiryDate"
                   render={({ field }) => (
@@ -940,19 +1041,26 @@ export function AddProductDialog({ open, onClose, onAdd }: AddProductDialogProps
                       </FormControl>
                     </FormItem>
                   )}
-                />
+                /> */}
               </div>
             </form>
           </Form>
+          )}
         </div>
 
         <DialogFooter className="gap-2 px-6 pb-6 sm:gap-2">
-          <Button type="button" variant="outline" onClick={handleClose}>
+          <Button type="button" variant="outline" onClick={handleClose} disabled={loading || isLoading}>
             Cancel
           </Button>
-          <Button type="submit" form="add-product-form" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {loading ? "Saving..." : "Add Product"}
+          <Button type="submit" form="add-product-form" disabled={loading || isLoading}>
+            {(loading || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {loading
+              ? "Saving..."
+              : isLoading
+                ? "Loading..."
+              : isEditMode
+                ? "Update Product"
+                : "Add Product"}
           </Button>
         </DialogFooter>
       </DialogContent>

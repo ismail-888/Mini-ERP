@@ -1,6 +1,6 @@
 "use client"
 
-import { MoreHorizontal, Pencil, Trash2, AlertTriangle } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, AlertTriangle, Eye } from "lucide-react"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import {
@@ -11,7 +11,7 @@ import {
 } from "~/components/ui/dropdown-menu"
 import DataTable from "~/components/shared/Table/DataTable"
 import type { ColumnDef } from "@tanstack/react-table"
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useExchangeRate } from "~/contexts/exchange-rate-context"
 import type { Product } from "~/lib/types"
 import { cn } from "~/lib/utils"
@@ -19,10 +19,14 @@ import { cn } from "~/lib/utils"
 interface ProductTableProps {
   products: Product[]
   onAddClick?: () => void
+  onEditClick?: (product: Product) => void
+  onDeleteClick?: (productId: string) => void | Promise<void>
+  onViewClick?: (product: Product) => void
+  onBulkDelete?: (productIds: string[]) => void | Promise<void>
   rightActions?: React.ReactNode
 }
 
-export function ProductTable({ products, onAddClick, rightActions }: ProductTableProps) {
+export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick, onViewClick, onBulkDelete, rightActions }: ProductTableProps) {
   const { formatUSD } = useExchangeRate()
 
   // Context menu state for row double-click actions (hooks must run unconditionally)
@@ -203,7 +207,7 @@ export function ProductTable({ products, onAddClick, rightActions }: ProductTabl
     {
       id: "actions",
       header: "Actions",
-      cell: () => <ActionMenu />,
+      cell: ({ row }) => <ActionMenu product={row.original} onEditClick={onEditClick} onDeleteClick={onDeleteClick} onViewClick={onViewClick} />,
       meta: { size: "56px", align: "center" },
     },
   ]
@@ -218,6 +222,8 @@ export function ProductTable({ products, onAddClick, rightActions }: ProductTabl
         tableName="Products"
         onAddClick={onAddClick}
         rightActions={rightActions}
+        onBulkDelete={onBulkDelete}
+        onRowDoubleClick={onViewClick}
         rowHeight={56}
         maxHeight={470}
         onRowRightClick={handleRowRightClick}
@@ -244,7 +250,16 @@ export function ProductTable({ products, onAddClick, rightActions }: ProductTabl
           <button
             className="w-full text-left px-3 py-2 hover:bg-muted rounded"
             onClick={() => {
-              console.log("Edit", ctxProduct)
+              onViewClick?.(ctxProduct)
+              setCtxProduct(null)
+            }}
+          >
+            View
+          </button>
+          <button
+            className="w-full text-left px-3 py-2 hover:bg-muted rounded"
+            onClick={() => {
+              onEditClick?.(ctxProduct)
               setCtxProduct(null)
             }}
           >
@@ -253,7 +268,7 @@ export function ProductTable({ products, onAddClick, rightActions }: ProductTabl
           <button
             className="w-full text-left px-3 py-2 text-destructive hover:bg-muted rounded"
             onClick={() => {
-              console.log("Delete", ctxProduct)
+              onDeleteClick?.(ctxProduct.id)
               setCtxProduct(null)
             }}
           >
@@ -265,7 +280,7 @@ export function ProductTable({ products, onAddClick, rightActions }: ProductTabl
   )
 }
 
-function ActionMenu() {
+function ActionMenu({ product, onEditClick, onDeleteClick, onViewClick }: { product: Product; onEditClick?: (product: Product) => void; onDeleteClick?: (productId: string) => void | Promise<void>; onViewClick?: (product: Product) => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -274,10 +289,13 @@ function ActionMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onViewClick?.(product)}>
+          <Eye className="mr-2 h-4 w-4" /> View
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEditClick?.(product)}>
           <Pencil className="mr-2 h-4 w-4" /> Edit
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-destructive">
+        <DropdownMenuItem onClick={() => onDeleteClick?.(product.id)} className="text-destructive">
           <Trash2 className="mr-2 h-4 w-4" /> Delete
         </DropdownMenuItem>
       </DropdownMenuContent>

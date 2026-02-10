@@ -1,23 +1,16 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Plus, Search, Upload, X, ChevronDown } from "lucide-react"
-import { Input } from "~/components/ui/input"
+import { Upload} from "lucide-react"
 import { Button } from "~/components/ui/button"
 import { ProductTable } from "~/components/dashboard/inventory/product-table"
 import { AddProductDialog } from "~/components/dashboard/inventory/add-product-dialog"
 import { ImportExcelModal } from "~/components/dashboard/inventory/import-excel-modal"
-
+import { DeleteModal } from "~/components/shared/DeleteModal"
+import ViewProductDialog from "~/components/dashboard/inventory/view-product-dialog"
+import { deleteProductAction, bulkDeleteProductsAction, getProductByIdAction } from "~/server/actions/get-products"
+import { toast } from "sonner"
 import { type Product } from "~/lib/types"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "~/components/ui/dropdown-menu"
-import { Badge } from "~/components/ui/badge"
 
 type StockFilter = "all" | "in-stock" | "low-stock" | "out-of-stock"
 
@@ -30,10 +23,19 @@ export default function InventoryClient({ initialProducts }: InventoryClientProp
   const [products, setProducts] = useState<Product[]>(initialProducts)
   
   const [addProductOpen, setAddProductOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [loadingEdit, setLoadingEdit] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [stockFilter, setStockFilter] = useState<StockFilter>("all")
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteType, setDeleteType] = useState<"single" | "bulk">("single")
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
+  const [deleteBulkIds, setDeleteBulkIds] = useState<string[]>([])
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [viewOpen, setViewOpen] = useState(false)
+  const [viewProductId, setViewProductId] = useState<string | null>(null)
 
   // 1. Map Prisma fields to UI names so the filtering/logic below stays clean
   const mappedProducts = useMemo(() => {
@@ -47,15 +49,6 @@ export default function InventoryClient({ initialProducts }: InventoryClientProp
       displayCategory: p.category ?? "Uncategorized"
     }))
   }, [products])
-
-  // 2. Derive filter lists from the actual database results
-  const dynamicBrands = useMemo(() => 
-    Array.from(new Set(products.map(p => p.brand).filter(Boolean))) as string[], 
-  [products])
-
-  const dynamicCategories = useMemo(() => 
-    Array.from(new Set(products.map(p => p.category).filter(Boolean))) as string[], 
-  [products])
 
   const filteredProducts = mappedProducts.filter((product) => {
     const matchesSearch =
@@ -88,28 +81,89 @@ export default function InventoryClient({ initialProducts }: InventoryClientProp
     setAddProductOpen(false)
   }
 
-  const toggleBrand = (brand: string) => {
-    setSelectedBrands((prev) =>
-      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
+  const handleEditClick = (product: Product) => {
+    // Open dialog immediately
+    setAddProductOpen(true)
+    setEditingProduct(null)
+    setLoadingEdit(true)
+    
+    // Fetch product data in background
+    getProductByIdAction(product.id)
+      .then((result) => {
+        if (result.success && result.data) {
+          setEditingProduct(result.data)
+        } else {
+          toast.error(result.error || "Failed to load product")
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading product:", error)
+        toast.error("Failed to load product")
+      })
+      .finally(() => {
+        setLoadingEdit(false)
+      })
+  }
+
+  const handleEditProduct = (updatedProduct: Product) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
     )
+    setEditingProduct(null)
   }
 
-  const toggleCategory = (category: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
-    )
+  const handleDeleteProduct = (productId: string) => {
+    const product = products.find((p) => p.id === productId)
+    setProductToDelete(product || null)
+    setDeleteProductId(productId)
+    setDeleteType("single")
+    setDeleteModalOpen(true)
   }
 
-  const clearFilters = () => {
-    setStockFilter("all")
-    setSelectedBrands([])
-    setSelectedCategories([])
+  const handleConfirmDeleteProduct = async () => {
+    if (!deleteProductId) return;
+    
+    try {
+      const result = await deleteProductAction(deleteProductId);
+      if (result.success) {
+        setProducts((prev) => prev.filter((p) => p.id !== deleteProductId));
+        toast.success("Product deleted successfully");
+      } else {
+        toast.error(result.error || "Failed to delete product");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete product");
+    }
   }
 
-  const hasActiveFilters =
-    stockFilter !== "all" ||
-    selectedBrands.length > 0 ||
-    selectedCategories.length > 0
+  const handleBulkDeleteProducts = (productIds: string[]) => {
+    setDeleteBulkIds(productIds)
+    setDeleteType("bulk")
+    setDeleteModalOpen(true)
+  }
+
+  const handleViewClick = (product: Product) => {
+    setViewProductId(product.id)
+    setViewOpen(true)
+  }
+
+  const handleConfirmBulkDelete = async () => {
+    if (deleteBulkIds.length === 0) return;
+    
+    try {
+      const result = await bulkDeleteProductsAction(deleteBulkIds);
+      if (result.success) {
+        setProducts((prev) => prev.filter((p) => !deleteBulkIds.includes(p.id)));
+        toast.success(`${deleteBulkIds.length} products deleted successfully`);
+      } else {
+        toast.error(result.error || "Failed to delete products");
+      }
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      toast.error("Failed to delete products");
+    }
+  }
 
   const stats = {
     total: mappedProducts.length,
@@ -121,17 +175,14 @@ export default function InventoryClient({ initialProducts }: InventoryClientProp
   return (
     <div className="">
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Inventory</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage your products and stock levels
           </p>
         </div>
-        {/* <div className="flex gap-2">
-          Buttons moved into the table header via ProductTable props
-        </div> */}
-      </div>
+      </div> */}
 
       {/* Stats Dashboard */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -173,69 +224,14 @@ export default function InventoryClient({ initialProducts }: InventoryClientProp
         </button>
       </div>
 
-      {/* Filters Bar */}
-      {/* <div className="mb-4 flex flex-wrap gap-3">
-        <div className="relative min-w-0 flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search products, barcodes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-              <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-            </button>
-          )}
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              Brand {selectedBrands.length > 0 && <Badge variant="secondary" className="ml-1">{selectedBrands.length}</Badge>}
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Brands</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {dynamicBrands.map(brand => (
-              <DropdownMenuCheckboxItem key={brand} checked={selectedBrands.includes(brand)} onCheckedChange={() => toggleBrand(brand)}>
-                {brand}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              Category {selectedCategories.length > 0 && <Badge variant="secondary" className="ml-1">{selectedCategories.length}</Badge>}
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Categories</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {dynamicCategories.map(cat => (
-              <DropdownMenuCheckboxItem key={cat} checked={selectedCategories.includes(cat)} onCheckedChange={() => toggleCategory(cat)}>
-                {cat}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
-            Clear filters <X className="ml-1 h-3 w-3" />
-          </Button>
-        )}
-      </div> */}
 
       <ProductTable
         products={filteredProducts}
         onAddClick={() => setAddProductOpen(true)}
+        onEditClick={handleEditClick}
+        onDeleteClick={handleDeleteProduct}
+        onViewClick={handleViewClick}
+        onBulkDelete={handleBulkDeleteProducts}
         rightActions={(
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
@@ -244,8 +240,42 @@ export default function InventoryClient({ initialProducts }: InventoryClientProp
         )}
       />
 
-      <AddProductDialog open={addProductOpen} onClose={() => setAddProductOpen(false)} onAdd={handleAddProduct} />
+      <AddProductDialog 
+        open={addProductOpen || !!editingProduct} 
+        onClose={() => {
+          setAddProductOpen(false)
+          setEditingProduct(null)
+        }} 
+        onAdd={handleAddProduct}
+        product={editingProduct ?? undefined}
+        onEdit={handleEditProduct}
+        isLoading={loadingEdit}
+        mode={(loadingEdit || !!editingProduct) ? "edit" : "add"}
+      />
       <ImportExcelModal open={importOpen} onClose={() => setImportOpen(false)} />
+      
+      <DeleteModal
+        open={deleteModalOpen && deleteType === "single"}
+        onClose={() => {
+          setDeleteModalOpen(false)
+          setDeleteProductId(null)
+          setProductToDelete(null)
+        }}
+        onConfirm={handleConfirmDeleteProduct}
+        title="Delete Product"
+        itemName={productToDelete?.name}
+      />
+      <DeleteModal
+        open={deleteModalOpen && deleteType === "bulk"}
+        onClose={() => {
+          setDeleteModalOpen(false)
+          setDeleteBulkIds([])
+        }}
+        onConfirm={handleConfirmBulkDelete}
+        title="Delete Products"
+        itemCount={deleteBulkIds.length}
+      />
+      <ViewProductDialog open={viewOpen} productId={viewProductId ?? undefined} onClose={() => { setViewOpen(false); setViewProductId(null) }} />
     </div>
   )
 }
