@@ -1,10 +1,20 @@
-import type { Product as PrismaProduct } from "@prisma/client"
+import type { 
+  Product as PrismaProduct, 
+  Category as PrismaCategory, 
+  Brand as PrismaBrand 
+} from "@prisma/client"
 
-// 1. Re-export the Prisma Product so you can just import { Product } from "~/lib/types"
-export type Product = PrismaProduct
+// 1. تعريف نوع المنتج مع العلاقات (Extended Product)
+export type ProductWithRelations = PrismaProduct & {
+  category?: PrismaCategory | null;
+  brand?: PrismaBrand | null;
+}
 
-// 2. Define types that ONLY exist in the UI/Frontend
-export interface CartItem extends PrismaProduct {
+// 2. تحديث النوع الأساسي ليستخدم العلاقات افتراضياً (اختياري ولكن يسهل العمل)
+export type Product = ProductWithRelations
+
+// 3. الأنواع الخاصة بالواجهة
+export interface CartItem extends ProductWithRelations {
   quantity: number
   lineTotalUSD: number
 }
@@ -15,7 +25,7 @@ export interface PaymentBreakdown {
   cardUSD: number
 }
 
-// 3. Define types for your Server Action responses
+// 4. استجابة الأكشنز
 export type ActionResponse<T> = {
   success: boolean
   data?: T

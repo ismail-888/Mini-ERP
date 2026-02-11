@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react";
-import { getProductByIdAction } from "~/server/actions/get-products";
+import { getProductByIdAction } from "~/server/actions/product/get-products";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { format } from "date-fns";
@@ -77,17 +77,17 @@ export default function ViewProductDialog({ open, productId, onClose }: ViewProd
 
               <div className="col-span-1 sm:col-span-2 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-base sm:text-lg font-semibold break-words">{product.name}</h3>
+                  <h3 className="text-base sm:text-lg font-semibold wrap-break-word">{product.name}</h3>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Category</p>
-                    <p className="text-sm font-medium">{product.category ?? 'General'}</p>
+                    <p className="text-sm font-medium">{product.category?.name ?? '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Brand</p>
-                    <p className="text-sm font-medium">{product.brand ?? '—'}</p>
+                    <p className="text-sm font-medium">{product.brand?.name ?? '—'}</p>
                   </div>
 
                   <div>

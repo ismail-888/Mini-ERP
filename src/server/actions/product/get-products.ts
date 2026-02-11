@@ -14,7 +14,7 @@ const supabase = createClient(
 );
 
 export async function getInventoryAction(): Promise<ActionResponse<Product[]>> {
-  const session = await auth();
+ const session = await auth();
   
   if (!session?.user) {
     return { success: false, error: "Unauthorized" };
@@ -22,12 +22,12 @@ export async function getInventoryAction(): Promise<ActionResponse<Product[]>> {
 
   try {
     const products = await db.product.findMany({
-      where: {
-        userId: session.user.id,
+      where: { userId: session.user.id },
+      include: {
+        category: true , 
+        brand: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     });
 
     return { success: true, data: products };
@@ -39,126 +39,101 @@ export async function getInventoryAction(): Promise<ActionResponse<Product[]>> {
 
 // --- 1. الحصول على منتج واحد (لأغراض التعديل أو العرض) ---
 export async function getProductByIdAction(id: string): Promise<ActionResponse<Product>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" };
-  }
+ const session = await auth();
+  if (!session?.user) return { success: false, error: "Unauthorized" };
 
   try {
     const product = await db.product.findUnique({
       where: { id, userId: session.user.id },
+      include: { category: true, brand: true }
     });
     
-    if (!product) {
-      return { success: false, error: "Product not found" };
-    }
+    if (!product) return { success: false, error: "Product not found" };
     
     return { success: true, data: product };
   } catch (error) {
-    console.error("Failed to fetch product:", error);
     return { success: false, error: "Failed to fetch product" };
   }
 }
 
 // --- 2. تعديل المنتج (Edit) ---
 export async function updateProductAction(id: string, data: any): Promise<ActionResponse<Product>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" };
-  }
+ const session = await auth();
+  if (!session?.user) return { success: false, error: "Unauthorized" };
 
   try {
+    // نفصل المعرفات عن بقية البيانات للتأكد من صحتها
+    const { categoryId, brandId, ...rest } = data;
+
     const updatedProduct = await db.product.update({
       where: { id, userId: session.user.id },
       data: {
-        ...data,
-        // تأكد من تنظيف الباركود هنا أيضاً إذا تغير
-        barcode: data.barcode?.trim() || null,
+        ...rest,
+        barcode: rest.barcode?.trim() || null,
+        categoryId: categoryId || null,
+        brandId: brandId || null,
       },
     });
 
     revalidatePath("/inventory");
     return { success: true, data: updatedProduct };
   } catch (error) {
-    console.error("Failed to update product:", error);
+    console.error("Update Error:", error);
     return { success: false, error: "Failed to update product" };
   }
 }
 
 // --- 3. حذف منتج واحد (Delete) ---
 export async function deleteProductAction(id: string): Promise<ActionResponse<null>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" };
-  }
+ const session = await auth();
+  if (!session?.user) return { success: false, error: "Unauthorized" };
 
   try {
-    // 1. العثور على المنتج للحصول على رابط الصورة قبل الحذف
     const product = await db.product.findUnique({
       where: { id, userId: session.user.id },
       select: { image: true },
     });
 
-    // 2. إذا وجدت صورة، يتم حذفها من السحاب
     if (product?.image) {
       const filePath = product.image.split("products/")[1];
-      if (filePath) {
-        await supabase.storage.from("products").remove([filePath]);
-      }
+      if (filePath) await supabase.storage.from("products").remove([filePath]);
     }
 
-    // 3. حذف السجل من قاعدة البيانات
-    await db.product.delete({
-      where: { id, userId: session.user.id },
-    });
+    await db.product.delete({ where: { id, userId: session.user.id } });
 
     revalidatePath("/inventory");
     return { success: true, data: null };
   } catch (error) {
-    console.error("Failed to delete product:", error);
     return { success: false, error: "فشل في حذف المنتج" };
   }
 }
 
 // --- 4. حذف مجموعة منتجات (Bulk Delete) ---
 export async function bulkDeleteProductsAction(ids: string[]): Promise<ActionResponse<null>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" };
-  }
+ const session = await auth();
+  if (!session?.user) return { success: false, error: "Unauthorized" };
 
   try {
-    // 1. جلب روابط الصور لجميع المنتجات المحددة
     const products = await db.product.findMany({
-      where: {
-        id: { in: ids },
-        userId: session.user.id,
-      },
+      where: { id: { in: ids }, userId: session.user.id },
       select: { image: true },
     });
 
-    // 2. استخراج المسارات وتصفية الروابط الفارغة
     const filePaths = products
       .map((p) => p.image?.split("products/")[1])
       .filter(Boolean) as string[];
 
-    // 3. حذف الصور من Supabase في عملية واحدة
     if (filePaths.length > 0) {
       await supabase.storage.from("products").remove(filePaths);
     }
 
-    // 4. حذف السجلات من قاعدة البيانات
     await db.product.deleteMany({
-      where: {
-        id: { in: ids },
-        userId: session.user.id,
-      },
+      where: { id: { in: ids }, userId: session.user.id },
     });
 
     revalidatePath("/inventory");
     return { success: true, data: null };
   } catch (error) {
-    console.error("Failed to delete products:", error);
-    return { success: false, error: "فشل في حذف مجموعة المنتجات" };
+    return { success: false, error: "فشل في حذف المنتجات" };
   }
 }

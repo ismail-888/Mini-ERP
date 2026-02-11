@@ -1,4 +1,4 @@
-import { getInventoryAction } from "~/server/actions/get-products";
+import { getInventoryAction } from "~/server/actions/product/get-products";
 import InventoryClient from "~/components/dashboard/inventory/inventory-client";
 
 export default async function InventoryPage() {

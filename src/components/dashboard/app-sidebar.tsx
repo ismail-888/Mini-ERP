@@ -16,6 +16,9 @@ import {
   LogOut,
   ChevronUp,
   LayoutDashboard,
+  // LayoutGrid,
+  Tags, 
+  LayoutGrid
 } from "lucide-react";
 import {
   Sidebar,
@@ -71,6 +74,8 @@ export function AppSidebar({
           { title: t("dashboard"), url: "/dashboard", icon: LayoutDashboard },
           { title: "Point of Sale", url: "/dashboard/pos", icon: ShoppingCart },
           { title: "Inventory", url: "/dashboard/inventory", icon: Package },
+          { title: "Category", url: "/dashboard/category", icon: LayoutGrid },
+          { title: "Brand", url: "/dashboard/brand", icon: Tags  },
           { title: "Reports", url: "/dashboard/reports", icon: BarChart3 },
         ];
 

@@ -48,15 +48,6 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
     return () => window.removeEventListener("click", handleClick)
   }, [])
 
-  if (products.length === 0) {
-    return (
-      <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-border text-center">
-        <p className="text-lg font-medium text-muted-foreground">No products found</p>
-        <p className="mt-1 text-sm text-muted-foreground">Try adjusting your search or filters</p>
-      </div>
-    )
-  }
-
   // --- Helper Logic aligned with Prisma schema names ---
   const getStockBadge = (product: Product) => {
     const stock = product.currentStock
@@ -127,7 +118,7 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
       header: "Name",
       meta: { size: "2fr", align: "start" },
       cell: ({ getValue, row }) => {
-        const brand = row.original.brand ?? "No Brand"
+        const brand = row.original.brand?.name ?? "No Brand"
         return (
           <div className="flex flex-col">
             <span className="font-medium">{String(getValue())}</span>

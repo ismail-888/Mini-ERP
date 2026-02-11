@@ -40,8 +40,8 @@ import { Separator } from "~/components/ui/separator";
 import { categories, brands } from "~/lib/mock-data";
 import { cn } from "~/lib/utils";
 import { format } from "date-fns";
-import { createProductAction } from "~/server/actions/product";
-import { updateProductAction } from "~/server/actions/get-products";
+import { createProductAction } from "~/server/actions/product/product";
+import { updateProductAction } from "~/server/actions/product/get-products";
 import { useExchangeRate } from "~/contexts/exchange-rate-context";
 import { toast } from "sonner";
 import { useForm, type SubmitHandler } from "react-hook-form";
@@ -94,8 +94,8 @@ export function AddProductDialog({
     defaultValues: {
       name: product?.name ?? "",
       barcode: product?.barcode ?? "",
-      brand: product?.brand ?? "",
-      category: product?.category ?? "",
+      brand: product?.brandId ?? "",
+      category: product?.categoryId ?? "",
       costPriceUSD: product?.costPriceUSD ?? 0,
       salePriceUSD: product?.salePriceUSD ?? 0,
       currentStock: product?.currentStock ?? 0,
@@ -135,8 +135,8 @@ export function AddProductDialog({
       reset({
         name: product.name ?? "",
         barcode: product.barcode ?? "",
-        brand: product.brand ?? "",
-        category: product.category ?? "",
+        brand: product.brand?.name ?? "",
+        category: product.category?.name ?? "",
         costPriceUSD: product.costPriceUSD ?? 0,
         salePriceUSD: product.salePriceUSD ?? 0,
         currentStock: product.currentStock ?? 0,
@@ -321,7 +321,8 @@ export function AddProductDialog({
         const result = await createProductAction({
           ...values,
           barcode: values.barcode ?? undefined,
-          brand: values.brand ?? undefined,
+          brandId: values.brand ?? undefined, 
+          categoryId: values.category ?? undefined,
           image: imagePreview ?? undefined,
         });
 

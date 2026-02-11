@@ -38,8 +38,12 @@ model Product {
     name            String
     barcode         String?  
     image           String?
-    category        String?
-    brand           String?
+
+    categoryId     String?
+    category       Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+    
+    brandId        String?
+    brand          Brand?    @relation(fields: [brandId], references: [id], onDelete: SetNull)
     
     costPriceUSD    Float    @default(0)
     salePriceUSD    Float    @default(0)
@@ -63,6 +67,30 @@ model Product {
 
     // تأكد من أن الباركود فريد فقط لكل مستخدم (محل) وليس على مستوى السيستم كله
     @@unique([barcode, userId]) 
+}
+
+model Category {
+    id        String    @id @default(cuid())
+    name      String
+    userId    String
+    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    products  Product[]
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+
+    @@unique([name, userId]) // يمنع تكرار نفس التصنيف لنفس المستخدم
+}
+
+model Brand {
+    id        String    @id @default(cuid())
+    name      String
+    userId    String
+    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    products  Product[]
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+
+    @@unique([name, userId]) // يمنع تكرار نفس الماركة لنفس المستخدم
 }
 
 model Sale {
@@ -107,6 +135,9 @@ model User {
     password      String?
     emailVerified DateTime?
     image         String?
+
+    categories    Category[] 
+    brands        Brand[]
     
     role          Role      @default(MERCHANT)
     plan          Plan      @default(FREE_TRIAL)
