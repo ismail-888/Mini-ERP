@@ -1,17 +1,10 @@
 "use client"
 
-import { MoreHorizontal, Pencil, Trash2, AlertTriangle, Eye } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 import { Badge } from "~/components/ui/badge"
-import { Button } from "~/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu"
 import DataTable from "~/components/shared/Table/DataTable"
+import { ActionMenu } from "~/components/shared/ActionMenu"
 import type { ColumnDef } from "@tanstack/react-table"
-import { useState, useEffect } from "react"
 import { useExchangeRate } from "~/contexts/exchange-rate-context"
 import type { Product } from "~/lib/types"
 import { cn } from "~/lib/utils"
@@ -28,25 +21,6 @@ interface ProductTableProps {
 
 export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick, onViewClick, onBulkDelete, rightActions }: ProductTableProps) {
   const { formatUSD } = useExchangeRate()
-
-  // Context menu state for row double-click actions (hooks must run unconditionally)
-  const [ctxProduct, setCtxProduct] = useState<Product | null>(null)
-  const [ctxPos, setCtxPos] = useState<{ x: number; y: number } | null>(null)
-
-  const handleRowRightClick = (product: Product, e?: React.MouseEvent) => {
-    if (!e) return
-    setCtxProduct(product)
-    setCtxPos({ x: e.clientX, y: e.clientY })
-  }
-
-  useEffect(() => {
-    const handleClick = () => {
-      setCtxProduct(null)
-      setCtxPos(null)
-    }
-    window.addEventListener("click", handleClick)
-    return () => window.removeEventListener("click", handleClick)
-  }, [])
 
   // --- Helper Logic aligned with Prisma schema names ---
   const getStockBadge = (product: Product) => {
@@ -195,12 +169,6 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
         )
       },
     },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => <ActionMenu product={row.original} onEditClick={onEditClick} onDeleteClick={onDeleteClick} onViewClick={onViewClick} />,
-      meta: { size: "56px", align: "center" },
-    },
   ]
 
   // (moved to top to keep hooks unconditional)
@@ -217,79 +185,31 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
         onRowDoubleClick={onViewClick}
         rowHeight={56}
         maxHeight={470}
-        onRowRightClick={handleRowRightClick}
         enableRowSelection={true}
         enablePagination={true}
         pageSize={10}
+        enableContextMenu={true}
+        actionConfig={{
+          showView: true,
+          showEdit: true,
+          showDelete: true,
+        }}
+        onRowView={onViewClick}
+        onRowEdit={onEditClick}
+        onRowDelete={onDeleteClick}
+        actions={(product) => (
+          <ActionMenu
+            row={product}
+            onView={onViewClick}
+            onEdit={onEditClick}
+            onDelete={onDeleteClick}
+            showView={true}
+            showEdit={true}
+            showDelete={true}
+          />
+        )}
+        actionsColumnMeta={{ size: "56px", align: "center", header: "Actions" }}
       />
-
-      {/* Context menu for row double-click */}
-      {ctxProduct && ctxPos && (
-        <div
-          className="z-50 rounded-md border bg-card p-2 shadow-md"
-          style={{
-            position: "fixed",
-            left: ctxPos.x,
-            top: ctxPos.y,
-            transform: "translate(8px, 8px)",
-            minWidth: 160,
-          }}
-          onClick={(e) => {
-            e.stopPropagation()
-          }}
-        >
-          <button
-            className="w-full text-left px-3 py-2 hover:bg-muted rounded"
-            onClick={() => {
-              onViewClick?.(ctxProduct)
-              setCtxProduct(null)
-            }}
-          >
-            View
-          </button>
-          <button
-            className="w-full text-left px-3 py-2 hover:bg-muted rounded"
-            onClick={() => {
-              onEditClick?.(ctxProduct)
-              setCtxProduct(null)
-            }}
-          >
-            Edit
-          </button>
-          <button
-            className="w-full text-left px-3 py-2 text-destructive hover:bg-muted rounded"
-            onClick={() => {
-              onDeleteClick?.(ctxProduct.id)
-              setCtxProduct(null)
-            }}
-          >
-            Delete
-          </button>
-        </div>
-      )}
     </div>
-  )
-}
-
-function ActionMenu({ product, onEditClick, onDeleteClick, onViewClick }: { product: Product; onEditClick?: (product: Product) => void; onDeleteClick?: (productId: string) => void | Promise<void>; onViewClick?: (product: Product) => void }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onViewClick?.(product)}>
-          <Eye className="mr-2 h-4 w-4" /> View
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onEditClick?.(product)}>
-          <Pencil className="mr-2 h-4 w-4" /> Edit
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onDeleteClick?.(product.id)} className="text-destructive">
-          <Trash2 className="mr-2 h-4 w-4" /> Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }

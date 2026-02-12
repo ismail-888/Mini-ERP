@@ -1,8 +1,11 @@
 import React from 'react'
+import { BrandClient } from '~/components/dashboard/brand/brand-client'
 
 function BrandPages() {
   return (
-    <div>BrandPages</div>
+    <div>
+      <BrandClient />
+    </div>
   )
 }
 

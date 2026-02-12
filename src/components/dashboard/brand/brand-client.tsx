@@ -1,13 +1,15 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { CategoryTable } from '~/components/dashboard/category/category-table'
-import AddCategoryDialog from '~/components/dashboard/category/add-category-dialog'
 import { DeleteModal } from '~/components/shared/DeleteModal'
-import { getCategoriesAction, deleteCategoryAction, bulkDeleteCategoriesAction } from '~/server/actions/category/categories-actions'
-import { toast } from 'sonner'
 
-interface Category {
+import { toast } from 'sonner'
+import { bulkDeleteBrandsAction, deleteBrandAction, getBrandsAction } from '~/server/actions/brand/brands-actions'
+import { BrandTable } from './brand-table'
+import AddBrandDialog from './add-brand-dialog'
+
+
+interface Brand {
   id: string
   name: string
   createdAt: Date
@@ -17,64 +19,64 @@ interface Category {
   }
 }
 
-export function CategoryClient() {
-  const [categories, setCategories] = useState<Category[]>([])
+export function BrandClient() {
+  const [brands, setBrands] = useState<Brand[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined)
+  const [editingBrand, setEditingBrand] = useState<Brand | undefined>(undefined)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deletingIds, setDeletingIds] = useState<string[] | null>(null)
   const [deletingName, setDeletingName] = useState<string | undefined>(undefined)
   const [deletingCount, setDeletingCount] = useState<number>(1)
 
-  // Fetch categories on mount
+  // Fetch brands on mount
   useEffect(() => {
-    fetchCategories()
+    fetchBrands()
   }, [])
 
-  const fetchCategories = async () => {
+  const fetchBrands = async () => {
     try {
       setLoading(true)
-      const result = await getCategoriesAction()
+      const result = await getBrandsAction()
       if (result.success) {
-        setCategories(result.data || [])
+        setBrands(result.data || [])
       } else {
-        toast.error(result.error || 'Failed to fetch categories')
+        toast.error(result.error || 'Failed to fetch brands')
       }
     } catch (error) {
-      toast.error('Error fetching categories')
+      toast.error('Error fetching brands')
     } finally {
       setLoading(false)
     }
   }
 
   const handleAddClick = () => {
-    setEditingCategory(undefined)
+    setEditingBrand(undefined)
     setDialogOpen(true)
   }
 
-  const handleEditClick = (category: Category) => {
-    setEditingCategory(category)
+  const handleEditClick = (brand: Brand) => {
+    setEditingBrand(brand)
     setDialogOpen(true)
   }
 
-  const handleViewClick = (category: Category) => {
-    // TODO: Open view category dialog
-    toast.info(`View category: ${category.name}`)
+  const handleViewClick = (brand: Brand) => {
+    // TODO: Open view brand dialog
+    toast.info(`View brand: ${brand.name}`)
   }
 
-  const handleDeleteClick = async (categoryId: string) => {
-    setDeletingIds([categoryId])
-    const cat = categories.find((c) => c.id === categoryId)
-    setDeletingName(cat?.name)
+  const handleDeleteClick = async (brandId: string) => {
+    setDeletingIds([brandId])
+    const brand = brands.find((b) => b.id === brandId)
+    setDeletingName(brand?.name)
     setDeletingCount(1)
     setDeleteModalOpen(true)
   }
 
-  const handleBulkDelete = async (categoryIds: string[]) => {
-    setDeletingIds(categoryIds)
+  const handleBulkDelete = async (brandIds: string[]) => {
+    setDeletingIds(brandIds)
     setDeletingName(undefined)
-    setDeletingCount(categoryIds.length)
+    setDeletingCount(brandIds.length)
     setDeleteModalOpen(true)
   }
 
@@ -83,26 +85,26 @@ export function CategoryClient() {
 
     try {
       if (deletingIds.length === 1) {
-        const categoryId = deletingIds[0]
-        if (!categoryId) return
-        const result = await deleteCategoryAction(categoryId)
+        const brandId = deletingIds[0]
+        if (!brandId) return
+        const result = await deleteBrandAction(brandId)
         if (result.success) {
-          toast.success('Category deleted successfully')
+          toast.success('Brand deleted successfully')
         } else {
-          toast.error(result.error || 'Failed to delete category')
+          toast.error(result.error || 'Failed to delete brand')
         }
       } else {
-        const result = await bulkDeleteCategoriesAction(deletingIds)
+        const result = await bulkDeleteBrandsAction(deletingIds)
         if (result.success) {
-          toast.success(`${deletingIds.length} categories deleted successfully`)
+          toast.success(`${deletingIds.length} brands deleted successfully`)
         } else {
-          toast.error(result.error || 'Failed to delete categories')
+          toast.error(result.error || 'Failed to delete brands')
         }
       }
-      await fetchCategories()
+      await fetchBrands()
     } catch (err) {
       console.error('Delete error', err)
-      toast.error('Error deleting categories')
+      toast.error('Error deleting brands')
     } finally {
       setDeleteModalOpen(false)
       setDeletingIds(null)
@@ -113,8 +115,8 @@ export function CategoryClient() {
 
   return (
     <>
-      <CategoryTable
-        categories={categories}
+      <BrandTable
+        brands={brands}
         onAddClick={handleAddClick}
         onEditClick={handleEditClick}
         onViewClick={handleViewClick}
@@ -122,19 +124,19 @@ export function CategoryClient() {
         onBulkDelete={handleBulkDelete}
       />
 
-      <AddCategoryDialog
+      <AddBrandDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        category={editingCategory}
-        mode={editingCategory ? "edit" : "add"}
+        brand={editingBrand}
+        mode={editingBrand ? "edit" : "add"}
         onAdd={async () => {
           // refresh list after add
-          await fetchCategories()
+          await fetchBrands()
           setDialogOpen(false)
         }}
         onEdit={async () => {
           // refresh list after edit
-          await fetchCategories()
+          await fetchBrands()
           setDialogOpen(false)
         }}
       />
@@ -147,7 +149,7 @@ export function CategoryClient() {
           setDeletingCount(1)
         }}
         onConfirm={handleConfirmDelete}
-        title="Delete Category"
+        title="Delete Brand"
         itemName={deletingName}
       />
 
@@ -160,7 +162,7 @@ export function CategoryClient() {
           setDeletingCount(1)
         }}
         onConfirm={handleConfirmDelete}
-        title="Delete Categories"
+        title="Delete Brands"
         itemCount={deletingCount}
       />
     </>

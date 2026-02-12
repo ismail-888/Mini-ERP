@@ -22,6 +22,7 @@ import { Input } from "~/components/ui/input";
 import { Checkbox } from "~/components/ui/checkbox";
 import BulkActionsBar from "./BulkActionsBar";
 import TablePagination from "./TablePagination";
+import { ContextMenu } from "~/components/shared/ContextMenu";
 
 type DataTableProps<TData> = {
   data: TData[];
@@ -47,6 +48,22 @@ type DataTableProps<TData> = {
   enablePagination?: boolean;
   pageSize?: number;
   pageSizeOptions?: number[];
+  /** Optional renderer for a per-row actions column. If provided and no existing column with id 'actions' is present, the table will append an actions column. */
+  actions?: (row: TData) => React.ReactNode;
+  /** Optional meta for the injected actions column */
+  actionsColumnMeta?: { size?: string; align?: string; header?: React.ReactNode };
+  /** Action configuration - which actions to show */
+  actionConfig?: {
+    showView?: boolean;
+    showEdit?: boolean;
+    showDelete?: boolean;
+  };
+  /** Callbacks for row actions */
+  onRowView?: (row: TData) => void;
+  onRowEdit?: (row: TData) => void;
+  onRowDelete?: (id: string) => void | Promise<void>;
+  /** Enable automatic context menu for row right-click */
+  enableContextMenu?: boolean;
 };
 
 function FilterInput<TData, TValue>({
@@ -111,17 +128,35 @@ export function DataTable<TData>({
   pageSize = 25,
   pageSizeOptions = [10, 25, 50, 100],
   onBulkDelete,
+  actions,
+  actionsColumnMeta,
+  actionConfig,
+  onRowView,
+  onRowEdit,
+  onRowDelete,
+  enableContextMenu = false,
 }: DataTableProps<TData>) {
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({});
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
+  const [ctxRow, setCtxRow] = React.useState<TData | null>(null);
+  const [ctxPos, setCtxPos] = React.useState<{ x: number; y: number } | null>(null);
 
+  // Close context menu on click
+  React.useEffect(() => {
+    const handleClick = () => {
+      setCtxRow(null);
+      setCtxPos(null);
+    };
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
 
   // Build table columns - add selection column if enabled
   const tableColumns = React.useMemo<ColumnDef<TData, unknown>[]>(() => {
-    let c = columns
+    let c = columns.slice()
     if (enableRowSelection) {
       const selectCol: ColumnDef<TData, unknown> = {
         id: "select",
@@ -151,8 +186,21 @@ export function DataTable<TData>({
       }
       c = [selectCol, ...c]
     }
+    // Inject actions column if requested and not already present
+    const hasActions = c.some((col) => col.id === "actions")
+    if (actions && !hasActions) {
+      const actionsCol: ColumnDef<TData, unknown> = {
+        id: "actions",
+        header: (actionsColumnMeta?.header as any) ?? "Actions",
+        cell: ({ row }) => actions(row.original),
+        meta: { size: actionsColumnMeta?.size ?? "56px", align: actionsColumnMeta?.align ?? "center" },
+        enableSorting: false,
+        enableHiding: false,
+      }
+      c = [...c, actionsCol]
+    }
     return c
-  }, [columns, enableRowSelection])
+  }, [columns, enableRowSelection, actions, actionsColumnMeta])
 
   const table = useReactTable({
     data,
@@ -348,6 +396,10 @@ export function DataTable<TData>({
                           data-index={virtualRow.index}
                           onContextMenu={(e) => {
                             e.preventDefault();
+                            if (enableContextMenu) {
+                              setCtxRow(row.original);
+                              setCtxPos({ x: e.clientX, y: e.clientY });
+                            }
                             onRowRightClick?.(row.original, e);
                           }}
                           onDoubleClick={() => onRowDoubleClick?.(row.original)}
@@ -392,6 +444,24 @@ export function DataTable<TData>({
           )}
         </div>
       </div>
+
+      {/* Context Menu */}
+      {enableContextMenu && (
+        <ContextMenu
+          position={ctxPos}
+          row={ctxRow}
+          onView={onRowView}
+          onEdit={onRowEdit}
+          onDelete={onRowDelete}
+          showView={actionConfig?.showView !== false}
+          showEdit={actionConfig?.showEdit !== false}
+          showDelete={actionConfig?.showDelete !== false}
+          onClose={() => {
+            setCtxRow(null);
+            setCtxPos(null);
+          }}
+        />
+      )}
     </div>
   )
 }

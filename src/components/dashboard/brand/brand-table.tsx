@@ -5,7 +5,7 @@ import DataTable from "~/components/shared/Table/DataTable"
 import { ActionMenu } from "~/components/shared/ActionMenu"
 import type { ColumnDef } from "@tanstack/react-table"
 
-interface Category {
+interface Brand {
   id: string
   name: string
   createdAt: Date
@@ -15,22 +15,22 @@ interface Category {
   }
 }
 
-interface CategoryTableProps {
-  categories: Category[]
+interface BrandTableProps {
+  brands: Brand[]
   onAddClick?: () => void
-  onEditClick?: (category: Category) => void
-  onDeleteClick?: (categoryId: string) => void | Promise<void>
-  onViewClick?: (category: Category) => void
-  onBulkDelete?: (categoryIds: string[]) => void | Promise<void>
+  onEditClick?: (brand: Brand) => void
+  onDeleteClick?: (brandId: string) => void | Promise<void>
+  onViewClick?: (brand: Brand) => void
+  onBulkDelete?: (brandIds: string[]) => void | Promise<void>
   rightActions?: React.ReactNode
 }
 
-export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteClick, onViewClick, onBulkDelete, rightActions }: CategoryTableProps) {
+export function BrandTable({ brands, onAddClick, onEditClick, onDeleteClick, onViewClick, onBulkDelete, rightActions }: BrandTableProps) {
   // --- Columns for DataTable ---
-  const columns: ColumnDef<Category>[] = [
+  const columns: ColumnDef<Brand>[] = [
     {
       accessorKey: "name",
-      header: "Category Name",
+      header: "Brand Name",
       meta: { size: "2fr", align: "start" },
       cell: ({ getValue }) => {
         return <span className="font-medium">{String(getValue())}</span>
@@ -71,10 +71,10 @@ export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteCli
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card p-2">
-      <DataTable<Category>
-        data={categories}
+      <DataTable<Brand>
+        data={brands}
         columns={columns}
-        tableName="Categories"
+        tableName="Brands"
         onAddClick={onAddClick}
         rightActions={rightActions}
         onBulkDelete={onBulkDelete}
@@ -93,9 +93,9 @@ export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteCli
         onRowView={onViewClick}
         onRowEdit={onEditClick}
         onRowDelete={onDeleteClick}
-        actions={(category) => (
+        actions={(brand) => (
           <ActionMenu
-            row={category}
+            row={brand}
             onView={onViewClick}
             onEdit={onEditClick}
             onDelete={onDeleteClick}
