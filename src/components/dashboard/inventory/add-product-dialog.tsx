@@ -37,7 +37,6 @@ import {
 } from "~/components/ui/popover";
 import { Separator } from "~/components/ui/separator";
 // removed ScrollArea to rely on native scrolling within dialog content
-import { categories, brands } from "~/lib/mock-data";
 import { cn } from "~/lib/utils";
 import { format } from "date-fns";
 import { createProductAction } from "~/server/actions/product/product";
@@ -68,6 +67,8 @@ interface AddProductDialogProps {
   onEdit?: (product: Product) => void; // Callback after editing
   isLoading?: boolean; // Loading state when fetching product data for edit
   mode?: "add" | "edit"; // explicitly force mode (useful while loading)
+  categories: Array<{ id: string; name: string }>;
+  brands: Array<{ id: string; name: string }>;
 }
 
 export function AddProductDialog({ 
@@ -78,6 +79,8 @@ export function AddProductDialog({
   onEdit,
   isLoading,
   mode = "add",
+  categories,
+  brands,
 }: AddProductDialogProps) {
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -135,8 +138,8 @@ export function AddProductDialog({
       reset({
         name: product.name ?? "",
         barcode: product.barcode ?? "",
-        brand: product.brand?.name ?? "",
-        category: product.category?.name ?? "",
+        brand: product.brandId ?? "",
+        category: product.categoryId ?? "",
         costPriceUSD: product.costPriceUSD ?? 0,
         salePriceUSD: product.salePriceUSD ?? 0,
         currentStock: product.currentStock ?? 0,
@@ -289,7 +292,8 @@ export function AddProductDialog({
         const result = await updateProductAction(product.id, {
           ...values,
           barcode: values.barcode ?? undefined,
-          brand: values.brand ?? undefined,
+          brandId: values.brand ?? undefined,
+          categoryId: values.category ?? undefined,
           image: imagePreview ?? undefined,
         });
 
@@ -609,9 +613,9 @@ export function AddProductDialog({
                                 <SelectValue placeholder="Select brand" />
                               </SelectTrigger>
                               <SelectContent>
-                                {brands.map((b) => (
-                                  <SelectItem key={b} value={b}>
-                                    {b}
+                                {brands.map((brand) => (
+                                  <SelectItem key={brand.id} value={brand.id}>
+                                    {brand.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -639,9 +643,9 @@ export function AddProductDialog({
                                 <SelectValue placeholder="Select category" />
                               </SelectTrigger>
                               <SelectContent>
-                                {categories.map((cat) => (
-                                  <SelectItem key={cat.name} value={cat.name}>
-                                    {cat.name}
+                                {categories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

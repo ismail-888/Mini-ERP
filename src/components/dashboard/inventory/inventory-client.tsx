@@ -20,13 +20,18 @@ type StockFilter = "all" | "in-stock" | "low-stock" | "out-of-stock";
 
 interface InventoryClientProps {
   initialProducts: Product[];
+  categories: Array<{ id: string; name: string }>;
+  brands: Array<{ id: string; name: string }>;
 }
 
 export default function InventoryClient({
   initialProducts,
+  categories,
+  brands,
 }: InventoryClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [loading, setLoading] = useState(false);
 
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -253,6 +258,7 @@ export default function InventoryClient({
         onDeleteClick={handleDeleteProduct}
         onViewClick={handleViewClick}
         onBulkDelete={handleBulkDeleteProducts}
+        isLoading={loading}
         rightActions={
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
@@ -272,6 +278,8 @@ export default function InventoryClient({
         onEdit={handleEditProduct}
         isLoading={loadingEdit}
         mode={loadingEdit || !!editingProduct ? "edit" : "add"}
+        categories={categories}
+        brands={brands}
       />
       <ImportExcelModal
         open={importOpen}

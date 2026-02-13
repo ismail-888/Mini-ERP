@@ -20,6 +20,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Checkbox } from "~/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { Calendar } from "~/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import BulkActionsBar from "./BulkActionsBar";
 import TablePagination from "./TablePagination";
 import { ContextMenu } from "~/components/shared/ContextMenu";
@@ -64,6 +68,8 @@ type DataTableProps<TData> = {
   onRowDelete?: (id: string) => void | Promise<void>;
   /** Enable automatic context menu for row right-click */
   enableContextMenu?: boolean;
+  /** Show loading state */
+  isLoading?: boolean;
 };
 
 function FilterInput<TData, TValue>({
@@ -113,6 +119,61 @@ function FilterInput<TData, TValue>({
   );
 }
 
+function DateFilterInput<TData, TValue>({
+  column,
+}: {
+  column: TableColumnType<TData, TValue>;
+}) {
+  const current = column.getFilterValue?.() as string | undefined;
+  const [date, setDate] = React.useState<Date | undefined>(current ? new Date(current) : undefined);
+
+  const handleSelectDate = (selectedDate: Date | undefined) => {
+    setDate(selectedDate);
+    column.setFilterValue?.(selectedDate ? selectedDate.toISOString() : undefined);
+  };
+
+  const handleClear = () => {
+    setDate(undefined);
+    column.setFilterValue?.(undefined);
+  };
+
+  return (
+    <div className="mt-1">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full h-8 justify-start text-left font-normal text-sm"
+          >
+            <CalendarIcon className="mr-2 h-3 w-3" />
+            {date ? format(date, "PPP") : <span className="text-muted-foreground">Pick a date</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={handleSelectDate}
+            initialFocus
+          />
+          {date && (
+            <div className="p-2 border-t">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={handleClear}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 export function DataTable<TData>({
   data,
   columns,
@@ -135,6 +196,7 @@ export function DataTable<TData>({
   onRowEdit,
   onRowDelete,
   enableContextMenu = false,
+  isLoading = false,
 }: DataTableProps<TData>) {
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>([]);
@@ -353,7 +415,11 @@ export function DataTable<TData>({
                             </div>
                             {!header.isPlaceholder && !isSelect && !isActions && !isAvatar && (
                               <div>
-                                <FilterInput column={column} />
+                                {colMeta?.filterType === "date" ? (
+                                  <DateFilterInput column={column} />
+                                ) : (
+                                  <FilterInput column={column} />
+                                )}
                               </div>
                             )}
                           </div>
@@ -364,7 +430,16 @@ export function DataTable<TData>({
                 ))}
               </thead>
               <tbody className="bg-card">
-                {rows.length === 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={table.getHeaderGroups()[0]?.headers.length ?? 1} className="h-24 text-center px-3 py-2">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        <p className="text-sm text-muted-foreground">Loading data...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : rows.length === 0 ? (
                   <tr>
                     <td colSpan={table.getHeaderGroups()[0]?.headers.length ?? 1} className="h-24 text-center px-3 py-2">
                       <div className="flex flex-col items-center justify-center gap-2">

@@ -122,6 +122,7 @@ export function BrandClient() {
         onViewClick={handleViewClick}
         onDeleteClick={handleDeleteClick}
         onBulkDelete={handleBulkDelete}
+        isLoading={loading}
       />
 
       <AddBrandDialog

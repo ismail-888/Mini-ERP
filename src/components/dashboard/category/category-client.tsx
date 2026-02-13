@@ -120,6 +120,7 @@ export function CategoryClient() {
         onViewClick={handleViewClick}
         onDeleteClick={handleDeleteClick}
         onBulkDelete={handleBulkDelete}
+        isLoading={loading}
       />
 
       <AddCategoryDialog

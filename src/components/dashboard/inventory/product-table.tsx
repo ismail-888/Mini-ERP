@@ -17,9 +17,10 @@ interface ProductTableProps {
   onViewClick?: (product: Product) => void
   onBulkDelete?: (productIds: string[]) => void | Promise<void>
   rightActions?: React.ReactNode
+  isLoading?: boolean
 }
 
-export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick, onViewClick, onBulkDelete, rightActions }: ProductTableProps) {
+export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick, onViewClick, onBulkDelete, rightActions, isLoading }: ProductTableProps) {
   const { formatUSD } = useExchangeRate()
 
   // --- Helper Logic aligned with Prisma schema names ---
@@ -90,23 +91,27 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
     {
       accessorKey: "name",
       header: "Name",
-      meta: { size: "2fr", align: "start" },
-      cell: ({ getValue, row }) => {
-        const brand = row.original.brand?.name ?? "No Brand"
-        return (
-          <div className="flex flex-col">
-            <span className="font-medium">{String(getValue())}</span>
-            <span className="text-xs text-muted-foreground">{brand}</span>
-          </div>
-        )
+      meta: { size: "1.5fr", align: "start" },
+      cell: ({ getValue }) => {
+        return <span className="font-medium">{String(getValue())}</span>
       },
     },
     {
-      accessorKey: "category",
+      id: "brand",
+      header: "Brand",
+      meta: { size: "1fr", align: "start" },
+      cell: ({ row }) => {
+        const brand = row.original.brand?.name ?? "—"
+        return <span className="text-sm text-muted-foreground">{brand}</span>
+      },
+    },
+    {
+      id: "category",
       header: "Category",
       meta: { size: "1fr", align: "start" },
-      cell: ({ getValue }) => {
-        return <span className="text-sm">{safeString(getValue(), "General")}</span>
+      cell: ({ row }) => {
+        const category = row.original.category?.name ?? "—"
+        return <span className="text-sm text-muted-foreground">{category}</span>
       },
     },
     {
@@ -118,6 +123,7 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
       },
     },
     {
+      accessorKey: "currentStock",
       id: "stock",
       header: "Stock",
       meta: { size: "120px", align: "center" },
@@ -129,14 +135,23 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
           )}
         </div>
       ),
+      filterFn: (row, columnId, filterValue) => {
+        const stock = row.original.currentStock
+        return String(stock).includes(String(filterValue))
+      },
     },
     {
       accessorKey: "costPriceUSD",
       header: "Cost",
       meta: { size: "120px", align: "right" },
       cell: ({ getValue }) => <span className="text-right text-sm text-muted-foreground">{formatUSD(getValue() as number)}</span>,
+      filterFn: (row, columnId, filterValue) => {
+        const cost = row.original.costPriceUSD ?? 0
+        return String(cost.toFixed(2)).includes(String(filterValue))
+      },
     },
     {
+      accessorFn: (row) => getEffectivePrice(row),
       id: "price",
       header: "Price",
       meta: { size: "140px", align: "right" },
@@ -152,8 +167,13 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
           <span className="font-medium">{formatUSD(row.original.salePriceUSD)}</span>
         )
       },
+      filterFn: (row, columnId, filterValue) => {
+        const price = getEffectivePrice(row.original)
+        return String(price.toFixed(2)).includes(String(filterValue))
+      },
     },
     {
+      accessorFn: (row) => getProfitMargin(row),
       id: "margin",
       header: "Margin",
       meta: { size: "110px", align: "right" },
@@ -167,6 +187,10 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
             {margin.toFixed(0)}%
           </span>
         )
+      },
+      filterFn: (row, columnId, filterValue) => {
+        const margin = getProfitMargin(row.original)
+        return String(margin.toFixed(0)).includes(String(filterValue))
       },
     },
   ]
@@ -189,6 +213,7 @@ export function ProductTable({ products, onAddClick, onEditClick, onDeleteClick,
         enablePagination={true}
         pageSize={10}
         enableContextMenu={true}
+        isLoading={isLoading}
         actionConfig={{
           showView: true,
           showEdit: true,

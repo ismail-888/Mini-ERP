@@ -4,6 +4,7 @@ import { Badge } from "~/components/ui/badge"
 import DataTable from "~/components/shared/Table/DataTable"
 import { ActionMenu } from "~/components/shared/ActionMenu"
 import type { ColumnDef } from "@tanstack/react-table"
+import { format } from "date-fns"
 
 interface Category {
   id: string
@@ -23,9 +24,10 @@ interface CategoryTableProps {
   onViewClick?: (category: Category) => void
   onBulkDelete?: (categoryIds: string[]) => void | Promise<void>
   rightActions?: React.ReactNode
+  isLoading?: boolean
 }
 
-export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteClick, onViewClick, onBulkDelete, rightActions }: CategoryTableProps) {
+export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteClick, onViewClick, onBulkDelete, rightActions, isLoading }: CategoryTableProps) {
   // --- Columns for DataTable ---
   const columns: ColumnDef<Category>[] = [
     {
@@ -37,6 +39,7 @@ export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteCli
       },
     },
     {
+      accessorFn: (row) => row._count.products,
       id: "productCount",
       header: "Products",
       meta: { size: "120px", align: "center" },
@@ -48,23 +51,41 @@ export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteCli
           </Badge>
         )
       },
-    },
-    {
-      id: "createdAt",
-      header: "Created At",
-      meta: { size: "180px", align: "start" },
-      cell: ({ row }) => {
-        const date = new Date(row.original.createdAt)
-        return <span className="text-sm text-muted-foreground">{date.toLocaleDateString()} {date.toLocaleTimeString()}</span>
+      filterFn: (row, columnId, filterValue) => {
+        const count = row.original._count.products
+        return String(count).includes(String(filterValue))
       },
     },
     {
+      accessorFn: (row) => format(new Date(row.createdAt), 'yyyy-MM-dd'),
+      id: "createdAt",
+      header: "Created At",
+      meta: { size: "150px", align: "start", filterType: "date" },
+      cell: ({ row }) => {
+        const date = new Date(row.original.createdAt)
+        return <span className="text-sm text-muted-foreground">{format(date, 'yyyy-MM-dd')}</span>
+      },
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue) return true
+        const rowDate = format(new Date(row.original.createdAt), 'yyyy-MM-dd')
+        const filterDate = format(new Date(filterValue), 'yyyy-MM-dd')
+        return rowDate === filterDate
+      },
+    },
+    {
+      accessorFn: (row) => format(new Date(row.updatedAt), 'yyyy-MM-dd'),
       id: "updatedAt",
       header: "Updated At",
-      meta: { size: "180px", align: "start" },
+      meta: { size: "150px", align: "start", filterType: "date" },
       cell: ({ row }) => {
         const date = new Date(row.original.updatedAt)
-        return <span className="text-sm text-muted-foreground">{date.toLocaleDateString()} {date.toLocaleTimeString()}</span>
+        return <span className="text-sm text-muted-foreground">{format(date, 'yyyy-MM-dd')}</span>
+      },
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue) return true
+        const rowDate = format(new Date(row.original.updatedAt), 'yyyy-MM-dd')
+        const filterDate = format(new Date(filterValue), 'yyyy-MM-dd')
+        return rowDate === filterDate
       },
     },
   ]
@@ -85,6 +106,7 @@ export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteCli
         enablePagination={true}
         pageSize={10}
         enableContextMenu={true}
+        isLoading={isLoading}
         actionConfig={{
           showView: false,
           showEdit: true,

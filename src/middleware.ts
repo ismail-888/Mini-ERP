@@ -30,7 +30,7 @@ export default auth((req) => {
     
     // إذا كانت الحالة محددة يدوياً كمنتهية
     if (user.status === "EXPIRED") {
-      return Response.redirect(new URL(`/${locale}/upgrade`, nextUrl));
+      return Response.redirect(new URL(`/${locale}/dashboard/upgrade`, nextUrl));
     }
 
     // حساب فترة السماح (Grace Period)
@@ -43,7 +43,7 @@ export default auth((req) => {
 
       // إذا تخطى الوقت الحالي تاريخ انتهاء التجربة + أيام السماح
       if (now > graceEndDate) {
-        return Response.redirect(new URL(`/${locale}/upgrade`, nextUrl));
+        return Response.redirect(new URL(`/${locale}/dashboard/upgrade`, nextUrl));
       }
     }
     
