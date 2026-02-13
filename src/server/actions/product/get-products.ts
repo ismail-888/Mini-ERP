@@ -73,6 +73,10 @@ export async function updateProductAction(id: string, data: any): Promise<Action
         categoryId: categoryId || null,
         brandId: brandId || null,
       },
+      include: {
+        category: true,
+        brand: true,
+      },
     });
 
     revalidatePath("/inventory");

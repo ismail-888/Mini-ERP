@@ -105,7 +105,7 @@ export function AddProductDialog({
       minStockAlert: product?.minStockAlert ?? 5,
       discountValue: product?.discountValue ?? 0,
       discountType:
-        (product?.discountType as "fixed" | "percentage") ?? "fixed",
+        (product?.discountType as "fixed" | "percentage") ?? "percentage",
       discountStartDate: product?.discountStartDate
         ? new Date(product.discountStartDate)
         : null,
@@ -118,23 +118,12 @@ export function AddProductDialog({
 
   const { handleSubmit, control, watch, reset, setValue, setFocus } = form;
 
-  const resetForm = () => {
-    reset();
-    setImagePreview(null);
-  };
-
-  // Initialize image preview for edit mode
+  // Reset form when dialog opens or mode/product changes
   useEffect(() => {
-    if (isEditMode && product?.image) {
-      setImagePreview(product.image);
-    } else if (!isEditMode) {
-      setImagePreview(null);
-    }
-  }, [isEditMode, product]);
+    if (!open) return;
 
-  // Reset form when product changes (for edit mode)
-  useEffect(() => {
-    if (product) {
+    if (isEditMode && product) {
+      // Edit mode: populate with product data
       reset({
         name: product.name ?? "",
         barcode: product.barcode ?? "",
@@ -155,10 +144,27 @@ export function AddProductDialog({
           : null,
         expiryDate: product.expiryDate ? new Date(product.expiryDate) : null,
       });
-    } else if (!isEditMode && open) {
-      resetForm();
+      setImagePreview(product.image ?? null);
+    } else if (!isEditMode) {
+      // Add mode: clear everything
+      reset({
+        name: "",
+        barcode: "",
+        brand: "",
+        category: "",
+        costPriceUSD: 0,
+        salePriceUSD: 0,
+        currentStock: 0,
+        minStockAlert: 5,
+        discountValue: 0,
+        discountType: "percentage",
+        discountStartDate: null,
+        discountEndDate: null,
+        expiryDate: null,
+      });
+      setImagePreview(null);
     }
-  }, [product, isEditMode, open, reset]);
+  }, [open, isEditMode, product, reset]);
 
   const startScanning = () => {
     // toggle UI; actual scanner initialization happens in the effect that waits
@@ -274,7 +280,22 @@ export function AddProductDialog({
   const handleClose = () => {
     // ensure scanner is stopped when dialog closes
     void stopScanning();
-    resetForm();
+    reset({
+      name: "",
+      barcode: "",
+      brand: "",
+      category: "",
+      costPriceUSD: 0,
+      salePriceUSD: 0,
+      currentStock: 0,
+      minStockAlert: 5,
+      discountValue: 0,
+      discountType: "percentage",
+      discountStartDate: null,
+      discountEndDate: null,
+      expiryDate: null,
+    });
+    setImagePreview(null);
     onClose();
   };
 
@@ -287,13 +308,16 @@ export function AddProductDialog({
     try {
       setLoading(true);
 
+      // Extract and exclude brand/category from values to avoid sending both
+      const { brand, category, ...productData } = values;
+
       if (isEditMode && product?.id) {
         // EDIT MODE: Call updateProductAction
         const result = await updateProductAction(product.id, {
-          ...values,
-          barcode: values.barcode ?? undefined,
-          brandId: values.brand ?? undefined,
-          categoryId: values.category ?? undefined,
+          ...productData,
+          barcode: productData.barcode ?? undefined,
+          brandId: brand ?? undefined,
+          categoryId: category ?? undefined,
           image: imagePreview ?? undefined,
         });
 
@@ -323,10 +347,10 @@ export function AddProductDialog({
       } else {
         // ADD MODE: Call createProductAction
         const result = await createProductAction({
-          ...values,
-          barcode: values.barcode ?? undefined,
-          brandId: values.brand ?? undefined, 
-          categoryId: values.category ?? undefined,
+          ...productData,
+          barcode: productData.barcode ?? undefined,
+          brandId: brand ?? undefined, 
+          categoryId: category ?? undefined,
           image: imagePreview ?? undefined,
         });
 
@@ -444,7 +468,7 @@ export function AddProductDialog({
             </div>
           )}
           {!isLoading && (
-          <Form {...form}>
+          <Form {...form} key={product?.id ?? "add-new"}>
             <form
               id="add-product-form"
               onSubmit={handleSubmit(onSubmit)}
@@ -606,7 +630,8 @@ export function AddProductDialog({
                           <FormLabel>Brand</FormLabel>
                           <FormControl>
                             <Select
-                              value={field.value ?? ""}
+                              key={`brand-${field.value || 'empty'}`}
+                              value={field.value || undefined}
                               onValueChange={field.onChange}
                             >
                               <SelectTrigger>
@@ -636,7 +661,8 @@ export function AddProductDialog({
                           <FormLabel>Category *</FormLabel>
                           <FormControl>
                             <Select
-                              value={field.value ?? ""}
+                              key={`category-${field.value || 'empty'}`}
+                              value={field.value || undefined}
                               onValueChange={field.onChange}
                             >
                               <SelectTrigger>
@@ -793,18 +819,19 @@ export function AddProductDialog({
                         <FormLabel>Discount Type</FormLabel>
                         <FormControl>
                           <Select
-                            value={field.value ?? "fixed"}
+                            key={`discountType-${field.value || 'empty'}`}
+                            value={field.value || "percentage"}
                             onValueChange={field.onChange}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select discount type" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="fixed">
-                                Fixed Amount
-                              </SelectItem>
                               <SelectItem value="percentage">
                                 Percentage
+                              </SelectItem>
+                              <SelectItem value="fixed">
+                                Fixed Amount
                               </SelectItem>
                             </SelectContent>
                           </Select>
