@@ -1,18 +1,27 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useState, useMemo, useCallback, type ReactNode } from "react"
 import type { Product, CartItem } from "~/lib/types"
 
-// Calculate the effective price after discount
+// دالة محسنة ومستقلة لحساب السعر الفعلي مع مراعاة تواريخ الخصم
 function getEffectivePrice(product: Product): number {
-  if (!product.discountType || !product.discountValue) {
-    return product.priceUSD
+  const now = new Date()
+  
+  // التحقق مما إذا كان الخصم سارياً (إذا وجدت تواريخ)
+  const hasStarted = !product.discountStartDate || new Date(product.discountStartDate) <= now
+  const hasNotEnded = !product.discountEndDate || new Date(product.discountEndDate) >= now
+  const isDiscountActive = hasStarted && hasNotEnded
+
+  if (!isDiscountActive || !product.discountType || !product.discountValue) {
+    return product.salePriceUSD
   }
+
   if (product.discountType === "fixed") {
-    return Math.max(0, product.priceUSD - product.discountValue)
+    return Math.max(0, product.salePriceUSD - product.discountValue)
   }
-  // percentage
-  return product.priceUSD * (1 - product.discountValue / 100)
+  
+  // نسبة مئوية (percentage)
+  return product.salePriceUSD * (1 - product.discountValue / 100)
 }
 
 interface CartContextType {
@@ -33,55 +42,76 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
 
-  const addItem = (product: Product) => {
+  // إضافة منتج - استخدام useCallback لمنع إعادة تعريف الدالة بشكل متكرر
+  const addItem = useCallback((product: Product) => {
     setItems((current) => {
       const existing = current.find((item) => item.id === product.id)
+      const effectivePrice = getEffectivePrice(product)
+
       if (existing) {
         return current.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { 
+                ...item, 
+                quantity: item.quantity + 1,
+                lineTotalUSD: effectivePrice * (item.quantity + 1) 
+              }
             : item
         )
       }
-      return [...current, { ...product, quantity: 1 }]
+      
+      // إضافة منتج جديد مع حساب الـ lineTotalUSD فوراً
+      return [...current, { ...product, quantity: 1, lineTotalUSD: effectivePrice }]
     })
-  }
+  }, [])
 
-  const removeItem = (productId: string) => {
+  // حذف منتج
+  const removeItem = useCallback((productId: string) => {
     setItems((current) => current.filter((item) => item.id !== productId))
-  }
+  }, [])
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  // تحديث الكمية يدوياً (مثلاً من الـ Input)
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(productId)
+      setItems((current) => current.filter((item) => item.id !== productId))
       return
     }
+
     setItems((current) =>
-      current.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
+      current.map((item) => {
+        if (item.id === productId) {
+          const effectivePrice = getEffectivePrice(item)
+          return { 
+            ...item, 
+            quantity, 
+            lineTotalUSD: effectivePrice * quantity 
+          }
+        }
+        return item
+      })
     )
-  }
+  }, [])
 
-  const clearCart = () => setItems([])
+  const clearCart = useCallback(() => setItems([]), [])
 
-  // Subtotal = sum of original prices
-  const subtotalUSD = items.reduce(
-    (sum, item) => sum + item.priceUSD * item.quantity,
-    0
-  )
-
-  // Total discount = sum of all discounts
-  const totalDiscountUSD = items.reduce((sum, item) => {
-    const effectivePrice = getEffectivePrice(item)
-    const discount = (item.priceUSD - effectivePrice) * item.quantity
-    return sum + discount
-  }, 0)
-
-  // Final total = subtotal - discount
-  const totalUSD = subtotalUSD - totalDiscountUSD
-
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+  // حساب المجاميع باستخدام useMemo لضمان الأداء العالي
+  // يتم الحساب في "دورة واحدة" (One single reduce) بدلاً من تكرار الـ reduce
+  const totals = useMemo(() => {
+    return items.reduce(
+      (acc, item) => {
+        const effectivePrice = getEffectivePrice(item)
+        const itemDiscount = (item.salePriceUSD - effectivePrice) * item.quantity
+        
+        return {
+          subtotal: acc.subtotal + (item.salePriceUSD * item.quantity),
+          discount: acc.discount + itemDiscount,
+          total: acc.total + item.lineTotalUSD,
+          count: acc.count + item.quantity,
+        }
+      },
+      { subtotal: 0, discount: 0, total: 0, count: 0 }
+    )
+  }, [items])
 
   return (
     <CartContext.Provider
@@ -91,10 +121,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeItem,
         updateQuantity,
         clearCart,
-        subtotalUSD,
-        totalDiscountUSD,
-        totalUSD,
-        itemCount,
+        subtotalUSD: totals.subtotal,
+        totalDiscountUSD: totals.discount,
+        totalUSD: totals.total,
+        itemCount: totals.count,
         getEffectivePrice,
       }}
     >
@@ -105,8 +135,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export function useCart() {
   const context = useContext(CartContext)
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider")
-  }
+  if (!context) throw new Error("useCart must be used within a CartProvider")
   return context
 }

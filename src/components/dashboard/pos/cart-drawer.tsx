@@ -46,7 +46,7 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
         <div className="space-y-3">
           {items.map((item) => {
             const effectivePrice = getEffectivePrice(item)
-            const hasDiscount = effectivePrice < item.priceUSD
+            const hasDiscount = effectivePrice < item.salePriceUSD
             const lineTotal = effectivePrice * item.quantity
 
             return (
@@ -73,7 +73,7 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
                           {hasDiscount ? (
                             <>
                               <span className="text-xs text-muted-foreground line-through">
-                                {formatUSD(item.priceUSD)}
+                                {formatUSD(item.salePriceUSD)}
                               </span>
                               <span className="text-sm font-medium text-primary">
                                 {formatUSD(effectivePrice)}
@@ -90,7 +90,7 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
                             </>
                           ) : (
                             <span className="text-sm text-muted-foreground">
-                              {formatUSD(item.priceUSD)} each
+                              {formatUSD(item.salePriceUSD)} each
                             </span>
                           )}
                         </div>
@@ -171,7 +171,7 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
 
         <div className="space-y-2">
           <Button className="w-full" size="lg" asChild>
-            <Link href="/pos/checkout" onClick={onClose}>
+            <Link href="/dashboard/pos/checkout" onClick={onClose}>
               Checkout
             </Link>
           </Button>

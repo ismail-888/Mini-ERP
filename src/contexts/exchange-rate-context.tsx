@@ -4,6 +4,7 @@ import { createContext, useContext, useState, type ReactNode } from "react"
 
 interface ExchangeRateContextType {
   exchangeRate: number; // الرقم مباشرة (مثلاً 90000)
+  rate: number; // alias للـ exchangeRate
   setExchangeRate: (newRate: number) => void;
   convertToLBP: (usd: number) => number;
   formatLBP: (amount: number) => string;
@@ -41,6 +42,7 @@ export function ExchangeRateProvider({
     <ExchangeRateContext.Provider
       value={{ 
         exchangeRate, 
+        rate: exchangeRate, // alias للـ exchangeRate
         setExchangeRate, // نسميها setExchangeRate لتشبه الـ useState
         convertToLBP, 
         formatLBP, 

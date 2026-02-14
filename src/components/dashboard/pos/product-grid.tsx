@@ -16,12 +16,12 @@ interface ProductGridProps {
 // Calculate effective price after discount
 function getEffectivePrice(product: Product): number {
   if (!product.discountType || !product.discountValue) {
-    return product.priceUSD
+    return product.salePriceUSD
   }
   if (product.discountType === "fixed") {
-    return Math.max(0, product.priceUSD - product.discountValue)
+    return Math.max(0, product.salePriceUSD - product.discountValue)
   }
-  return product.priceUSD * (1 - product.discountValue / 100)
+  return product.salePriceUSD * (1 - product.discountValue / 100)
 }
 
 export function ProductGrid({ products }: ProductGridProps) {
@@ -44,11 +44,11 @@ export function ProductGrid({ products }: ProductGridProps) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {products.map((product) => {
-        const isOutOfStock = product.stock === 0
+        const isOutOfStock = product.currentStock === 0
         const isLowStock =
-          product.stock > 0 && product.stock <= product.minStockAlert
+          product.currentStock > 0 && product.currentStock <= product.minStockAlert
         const effectivePrice = getEffectivePrice(product)
-        const hasDiscount = effectivePrice < product.priceUSD
+        const hasDiscount = effectivePrice < product.salePriceUSD
 
         return (
           <Card
@@ -102,8 +102,8 @@ export function ProductGrid({ products }: ProductGridProps) {
                   {product.name}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {product.brand && <span>{product.brand} / </span>}
-                  {product.category}
+                  {product.brand && <span>{typeof product.brand === 'string' ? product.brand : product.brand.name} / </span>}
+                  {typeof product.category === 'string' ? product.category : product.category?.name}
                 </p>
                 <div className="pt-1">
                   {hasDiscount ? (
@@ -113,7 +113,7 @@ export function ProductGrid({ products }: ProductGridProps) {
                           {formatUSD(effectivePrice)}
                         </p>
                         <p className="text-xs text-muted-foreground line-through">
-                          {formatUSD(product.priceUSD)}
+                          {formatUSD(product.salePriceUSD)}
                         </p>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -123,10 +123,10 @@ export function ProductGrid({ products }: ProductGridProps) {
                   ) : (
                     <>
                       <p className="text-base font-bold text-foreground">
-                        {formatUSD(product.priceUSD)}
+                        {formatUSD(product.salePriceUSD)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatLBP(convertToLBP(product.priceUSD))}
+                        {formatLBP(convertToLBP(product.salePriceUSD))}
                       </p>
                     </>
                   )}

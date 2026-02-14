@@ -33,7 +33,7 @@ export default function CheckoutPage() {
     const cardValue = Number.parseFloat(cardAmount) || 0
 
     // Convert LBP to USD equivalent
-    const cashLBPInUSD = cashLBPValue / rate.usdToLBP
+    const cashLBPInUSD = cashLBPValue / rate
 
     const totalPaidUSD = cashUSDValue + cashLBPInUSD + cardValue
     const remainingUSD = totalUSD - totalPaidUSD
@@ -43,17 +43,17 @@ export default function CheckoutPage() {
       totalPaidUSD,
       remainingUSD,
       changeUSD,
-      changeLBP: changeUSD * rate.usdToLBP,
+      changeLBP: changeUSD * rate,
       isComplete: remainingUSD <= 0.01, // small tolerance for floating point
     }
-  }, [cashUSD, cashLBP, cardAmount, totalUSD, rate.usdToLBP])
+  }, [cashUSD, cashLBP, cardAmount, totalUSD, rate])
 
   const handleCheckout = async () => {
     setIsProcessing(true)
     // Simulate payment processing
     await new Promise((resolve) => setTimeout(resolve, 1500))
     clearCart()
-    router.push("/pos/success")
+    router.push("/dashboard/pos/success")
   }
 
   if (items.length === 0) {
@@ -64,7 +64,7 @@ export default function CheckoutPage() {
           Add products to your cart first
         </p>
         <Button asChild className="mt-4">
-          <Link href="/pos">Go to POS</Link>
+          <Link href="/dashboard/pos">Go to POS</Link>
         </Button>
       </div>
     )
@@ -75,7 +75,7 @@ export default function CheckoutPage() {
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/pos">
+          <Link href="/dashboard/pos">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
@@ -91,7 +91,7 @@ export default function CheckoutPage() {
           <div className="space-y-3">
             {items.map((item) => {
               const effectivePrice = getEffectivePrice(item)
-              const hasDiscount = effectivePrice < item.priceUSD
+              const hasDiscount = effectivePrice < item.salePriceUSD
               return (
                 <div key={item.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

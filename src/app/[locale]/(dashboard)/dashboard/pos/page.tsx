@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Search, ScanBarcode, ShoppingCart, X, Plus, Keyboard } from "lucide-react"
 import { Input } from "~/components/ui/input"
 import { Button } from "~/components/ui/button"
@@ -8,7 +8,8 @@ import { ProductGrid } from "~/components/dashboard/pos/product-grid"
 import { CartDrawer } from "~/components/dashboard/pos/cart-drawer"
 import { BarcodeScanner } from "~/components/dashboard/pos/barcode-scanner"
 import { useCart } from "~/contexts/cart-context"
-import { mockProducts } from "~/lib/mock-data"
+import { getInventoryAction } from "~/server/actions/product/get-products"
+import type { Product } from "~/lib/types"
 import {
   Sheet,
   SheetContent,
@@ -27,6 +28,8 @@ import {
 
 
 export default function POSPage() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [scannerOpen, setScannerOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
@@ -36,15 +39,37 @@ export default function POSPage() {
   const [manualQty, setManualQty] = useState("1")
   const { itemCount, addItem } = useCart()
 
-  const filteredProducts = mockProducts.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.barcode.includes(searchQuery) ||
-      (product.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-  )
+  // Fetch all products once on mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true)
+      const result = await getInventoryAction()
+      if (result.success && result.data) {
+        setProducts(result.data)
+      }
+      setLoading(false)
+    }
+    void fetchProducts()
+  }, [])
+
+  // Client-side filtering for instant response
+ const filteredProducts = useMemo(() => {
+  const query = searchQuery.toLowerCase();
+  return products.filter((product) => {
+    const brandName = typeof product.brand === 'object' ? product.brand?.name : '';
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.barcode?.includes(query) ||
+      brandName?.toLowerCase().includes(query)
+    );
+  });
+}, [products, searchQuery]);
+
+  // Only render first 40 products for optimal performance
+  const displayedProducts = filteredProducts.slice(0, 40)
 
   const handleBarcodeScanned = (barcode: string) => {
-    const product = mockProducts.find((p) => p.barcode === barcode)
+    const product = products.find((p) => p.barcode === barcode)
     if (product) {
       addItem(product)
       setScannerOpen(false)
@@ -57,15 +82,18 @@ export default function POSPage() {
 
     if (price > 0) {
       // Create a temporary product for manual entry
-      const manualProduct = {
+      const manualProduct: Product = {
         id: `manual-${Date.now()}`,
         name: manualName || "Custom Item",
         barcode: `MANUAL-${Date.now()}`,
-        priceUSD: price,
-        costUSD: price * 0.7, // Estimated cost
-        stock: 999,
+        salePriceUSD: price,
+        costPriceUSD: price * 0.7, // Estimated cost
+        currentStock: 999,
         minStockAlert: 0,
-        category: "Other",
+        categoryId: null,
+        category: null,
+        brandId: null,
+        brand: null,
       }
 
       // Add the item multiple times based on quantity
@@ -80,6 +108,17 @@ export default function POSPage() {
       setManualEntryOpen(false)
     }
   }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+  if (e.key === 'Enter' && searchQuery) {
+    const product = products.find(p => p.barcode === searchQuery);
+    if (product) {
+      addItem(product);
+      setSearchQuery(""); // امسح البحث فوراً ليكون جاهزاً للقطعة التالية
+      e.preventDefault();
+    }
+  }
+};
 
   // Quick keypad values
   const quickAmounts = [1, 5, 10, 20, 50, 100]
@@ -97,6 +136,7 @@ export default function POSPage() {
                 placeholder="Search products, brands, or scan..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="pl-10"
               />
               {searchQuery && (
@@ -162,7 +202,13 @@ export default function POSPage() {
 
         {/* Product Grid */}
         <div className="flex-1 overflow-y-auto p-4">
-          <ProductGrid products={filteredProducts} />
+          {loading ? (
+            <div className="flex h-64 items-center justify-center">
+              <p className="text-muted-foreground">Loading products...</p>
+            </div>
+          ) : (
+            <ProductGrid products={displayedProducts} />
+          )}
         </div>
       </div>
 
@@ -183,7 +229,7 @@ export default function POSPage() {
 
       {/* Manual Entry Modal */}
       <Dialog open={manualEntryOpen} onOpenChange={setManualEntryOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md p-2">
           <DialogHeader>
             <DialogTitle>Manual Entry</DialogTitle>
             <DialogDescription>

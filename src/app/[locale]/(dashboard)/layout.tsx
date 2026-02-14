@@ -11,13 +11,14 @@ export default async function DashboardLayout({
   params 
 }: { 
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
   const session = await auth();
+  const { locale } = await params;
 
   // 1. حماية المسار: إعادة التوجيه إذا لم يكن هناك جلسة نشطة
   if (!session) {
-    redirect(`/${params.locale}/login`);
+    redirect(`/${locale}/login`);
   }
 
   // 2. جلب أحدث سعر صرف (منطق الأولويات)

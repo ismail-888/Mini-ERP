@@ -7,13 +7,14 @@ export default async function AdminLayout({
   params 
 }: { 
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
   const session = await auth();
+  const { locale } = await params;
 
   // حماية إضافية على مستوى السيرفر
   if (!session || session.user?.role !== "ADMIN") {
-    redirect(`/${params.locale}/login`);
+    redirect(`/${locale}/login`);
   }
 
   return (
