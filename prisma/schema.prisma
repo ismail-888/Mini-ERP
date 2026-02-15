@@ -24,6 +24,19 @@ enum Plan {
     ANNUAL        // اشتراك سنوي
 }
 
+enum SaleStatus {
+    PAID        // مدفوعة بالكامل
+    REFUNDED    // مسترجعة
+    VOIDED      // ملغاة (خطأ كاشير)
+    PARTIAL     // مدفوعة جزئياً (للدين)
+}
+
+enum PaymentType {
+    CASH
+    CARD
+    SPLIT
+}
+
 enum SubscriptionStatus {
     ACTIVE
     EXPIRED
@@ -94,36 +107,51 @@ model Brand {
 }
 
 model Sale {
-    id              String   @id @default(cuid())
+    id              String      @id @default(cuid())
+    
+    // رقم فاتورة سهل القراءة للزبون (تلقائي الزيادة)
+    // ملاحظة: سنحتاج Logic في الـ Action لزيادة هذا الرقم لكل مستخدم
+    invoiceNumber   Int         @default(autoincrement()) 
+    
+    status          SaleStatus  @default(PAID)
+    paymentType     PaymentType @default(CASH)
+
     totalUSD        Float
     totalLBP        Float
-    exchangeRate    Float    // سعر الصرف وقت هذه البيعة
+    exchangeRate    Float
     
-    // تفاصيل الدفع (للزبون اللي بيدفع شقفة دولار وشقفة لبناني)
-    paidCashUSD     Float    @default(0)
-    paidCashLBP     Float    @default(0)
-    paidCardUSD     Float    @default(0)
+    paidCashUSD     Float       @default(0)
+    paidCashLBP     Float       @default(0)
+    paidCardUSD     Float       @default(0)
     
-    // ربط البيعة بالمحل
     userId          String
-    user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     items           SaleItem[]
-    createdAt       DateTime @default(now())
+    createdAt       DateTime    @default(now())
+    updatedAt       DateTime    @updatedAt
+
+    // نضع index لتحسين سرعة البحث في التقارير مستقبلاً
+    @@index([userId, createdAt])
 }
 
 model SaleItem {
-    id        String  @id @default(cuid())
-    saleId    String
-    productId String
-    quantity  Int
-    priceUSD  Float   // السعر الذي تم البيع به (لحفظ التاريخ)
-
-    // أضف هذا الحقل لتعرف كم وفر الزبون أو كم كان الخصم وقتها
-    discountApplied Float @default(0)
+    id              String   @id @default(cuid())
+    saleId          String
+    productId       String
+    quantity        Int
     
-    sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
-    product   Product @relation(fields: [productId], references: [id])
+    // السعر الأساسي قبل أي خصم
+    originalPrice   Float    @default(0) 
+    // السعر النهائي الذي دفع للقطعة الواحدة
+    priceUSD        Float    
+    // قيمة الخصم المطبق للقطعة الواحدة
+    discountApplied Float    @default(0)
+    
+    sale            Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+    product         Product  @relation(fields: [productId], references: [id])
+
+    @@index([saleId])
 }
 
 // --- جداول المستخدمين والأمان (NextAuth + SaaS) ---
