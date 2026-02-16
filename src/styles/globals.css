@@ -97,45 +97,45 @@
 }
 
 .dark {
-  /* خلفية رمادية داكنة جداً (Slate 950) */
-  --background: oklch(0.12 0.01 250); 
-  --foreground: oklch(0.98 0.005 250);
+  /* خلفية رمادية داكنة محسّنة للراحة البصرية */
+  --background: oklch(0.15 0.01 250); /* أفتح قليلاً من Slate 950 */
+  --foreground: oklch(0.95 0.005 250); /* أقل سطوعاً قليلاً */
   
-  /* جعل السايدبار والتوب بار بنفس اللون الداكن (Slate 900) */
-  --sidebar: oklch(0.18 0.01 250);
-  --card: oklch(0.18 0.01 250);
-  --card-foreground: oklch(0.98 0.01 240);
+  /* كاردات وسايدبار بتباين أفضل */
+  --sidebar: oklch(0.20 0.015 250); /* Slate 850 تقريباً */
+  --card: oklch(0.20 0.015 250);
+  --card-foreground: oklch(0.95 0.01 240);
   
-  --popover: oklch(0.15 0.02 240);
-  --popover-foreground: oklch(0.98 0.01 240);
+  --popover: oklch(0.18 0.02 240);
+  --popover-foreground: oklch(0.95 0.01 240);
 
-  --primary: oklch(0.75 0.16 164); /* Bright Emerald */
-  --primary-foreground: oklch(0.12 0.01 250);
+  --primary: oklch(0.72 0.18 164); /* Emerald أكثر حيوية */
+  --primary-foreground: oklch(0.98 0.005 164);
 
-  --secondary: oklch(0.22 0.04 164);
-  --secondary-foreground: oklch(0.98 0.01 164);
+  --secondary: oklch(0.25 0.04 164);
+  --secondary-foreground: oklch(0.95 0.01 164);
   
-  --muted: oklch(0.25 0.02 250);
-  --muted-foreground: oklch(0.7 0.02 250);
+  --muted: oklch(0.28 0.02 250); /* أفتش قليلاً */
+  --muted-foreground: oklch(0.65 0.02 250); /* تباين أفضل */
   
-  --accent: oklch(0.22 0.04 164);
-  --accent-foreground: oklch(0.98 0.01 164);
+  --accent: oklch(0.25 0.05 164);
+  --accent-foreground: oklch(0.95 0.01 164);
 
-  --destructive: oklch(0.45 0.15 28);
-  --destructive-foreground: oklch(0.98 0.01 0);
+  --destructive: oklch(0.50 0.18 28); /* أكثر وضوحاً */
+  --destructive-foreground: oklch(0.98 0.005 0);
 
-  --border: oklch(0.25 0.02 250);
-  --input: oklch(0.22 0.02 240);
+  --border: oklch(0.28 0.02 250); /* حدود أوضح */
+  --input: oklch(0.25 0.02 240);
   --ring: oklch(0.72 0.18 164);
 
-  /* سايدبار غامق جداً */
-  --sidebar: oklch(0.14 0.02 240);
-  --sidebar-foreground: oklch(0.98 0.01 240);
+  /* سايدبار متوازن */
+  --sidebar: oklch(0.17 0.02 240);
+  --sidebar-foreground: oklch(0.95 0.01 240);
   --sidebar-primary: oklch(0.72 0.18 164);
-  --sidebar-primary-foreground: oklch(0.14 0.02 240);
-  --sidebar-accent: oklch(0.22 0.04 164);
-  --sidebar-accent-foreground: oklch(0.98 0.01 164);
-  --sidebar-border: oklch(0.25 0.02 250);
+  --sidebar-primary-foreground: oklch(0.98 0.005 164);
+  --sidebar-accent: oklch(0.25 0.04 164);
+  --sidebar-accent-foreground: oklch(0.95 0.01 164);
+  --sidebar-border: oklch(0.28 0.02 250);
   --sidebar-ring: oklch(0.72 0.18 164);
 }
 
