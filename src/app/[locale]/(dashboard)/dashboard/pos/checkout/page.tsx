@@ -61,7 +61,7 @@ export default function CheckoutPage() {
     };
   }, [cashUSD, cashLBP, cardAmount, totalUSD, rate]);
 
-  const handleCheckout = async () => {
+ const handleCheckout = async () => {
     if (paymentMethod === "split" && !paymentCalc.isComplete) {
       toast.error("يرجى استكمال المبلغ المطلوب");
       return;
@@ -69,13 +69,13 @@ export default function CheckoutPage() {
 
     setIsProcessing(true);
 
-    // تجهيز البيانات لإرسالها لـ Server Action
+    // 1. تجهيز البيانات (لاحظ وجود الحقول المتوافقة مع الـ Interface الجديد)
     const itemsData = items.map((item) => {
       const effectivePrice = getEffectivePrice(item);
       const discountPerItem = item.salePriceUSD - effectivePrice;
       return {
-        productId: item.id,
-        name: item.name, // أضفنا الاسم هنا لتسهيل عرضه في الإيصال لاحقاً
+        productId: item.id, // سيبدأ بـ "manual-" للمنتجات اليدوية
+        name: item.name,    // سيتم تخزينه في itemName بقاعدة البيانات
         quantity: item.quantity,
         originalPrice: item.salePriceUSD,
         priceUSD: effectivePrice,
@@ -104,9 +104,14 @@ export default function CheckoutPage() {
       const result = await createSaleAction(saleData);
 
       if (result.success) {
-        toast.success("تم تسجيل العملية بنجاح!");
+        // معالجة تنبيهات المخزون المنخفض (إذا وجدت)
+        if (result.data.lowStockAlerts && result.data.lowStockAlerts.length > 0) {
+          result.data.lowStockAlerts.forEach((msg: string) => {
+            toast.warning(`تنبيه مخزون: ${msg}`, { duration: 5000 });
+          });
+        }
 
-        // --- الجزء المطلوب: تحويل المنتجات لـ Query String ---
+        // تحضير الـ Query String لصفحة النجاح والإيصال
         const itemsQuery = encodeURIComponent(
           JSON.stringify(
             itemsData.map((i) => ({
@@ -117,23 +122,26 @@ export default function CheckoutPage() {
           ),
         );
 
-        clearCart();
-
-        // الانتقال لصفحة النجاح مع تمرير كل البيانات بما فيها المنتجات
+        // الانتقال لصفحة النجاح أولاً
         router.push(
           `/dashboard/pos/success?id=${result.data.id}&invoiceNumber=${result.data.invoiceNumber}&total=${totalUSD}&change=${paymentCalc.changeUSD}&items=${itemsQuery}`,
         );
+
+        // Clear cart AFTER navigation starts
+        clearCart();
+        // Don't reset isProcessing - let the component unmount with it still true
       } else {
         toast.error(result.error || "حدث خطأ ما");
+        setIsProcessing(false);
       }
     } catch (error) {
+      console.error(error);
       toast.error("فشل الاتصال بالخادم");
-    } finally {
       setIsProcessing(false);
     }
   };
 
-  if (items.length === 0) {
+  if (items.length === 0 && !isProcessing) {
     return (
       <div className="flex h-[calc(100vh-3.5rem-5rem)] flex-col items-center justify-center p-6 text-center lg:h-[calc(100vh-3.5rem)]">
         <p className="text-foreground text-lg font-medium">No items in cart</p>

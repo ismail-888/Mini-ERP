@@ -55,8 +55,8 @@ export async function createBrandAction(name: string): Promise<ActionResponse<an
         userId: session.user.id
       }
     });
-    revalidatePath("/inventory");
-    revalidatePath("/brands");
+    revalidatePath("/dashboard/inventory");
+    revalidatePath("/dashboard/brand");
     return { success: true, data: brand };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -76,8 +76,8 @@ export async function updateBrandAction(id: string, name: string): Promise<Actio
       where: { id, userId: session.user.id },
       data: { name: name.trim() }
     });
-    revalidatePath("/inventory");
-    revalidatePath("/brands");
+    revalidatePath("/dashboard/inventory");
+    revalidatePath("/dashboard/brand");
     return { success: true, data: updated };
   } catch (error) {
     return { success: false, error: "فشل في تحديث الماركة" };
@@ -93,8 +93,8 @@ export async function deleteBrandAction(id: string): Promise<ActionResponse<null
     await db.brand.delete({
       where: { id, userId: session.user.id }
     });
-    revalidatePath("/inventory");
-    revalidatePath("/brands");
+    revalidatePath("/dashboard/inventory");
+    revalidatePath("/dashboard/brand");
     return { success: true, data: null };
   } catch (error) {
     return { success: false, error: "فشل في حذف الماركة" };
@@ -113,8 +113,8 @@ export async function bulkDeleteBrandsAction(ids: string[]): Promise<ActionRespo
         userId: session.user.id
       }
     });
-    revalidatePath("/inventory");
-    revalidatePath("/brands");
+    revalidatePath("/dashboard/inventory");
+    revalidatePath("/dashboard/brand");
     return { success: true, data: null };
   } catch (error) {
     return { success: false, error: "فشل في حذف الماركات المحددة" };

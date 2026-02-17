@@ -55,8 +55,8 @@ export async function createCategoryAction(name: string): Promise<ActionResponse
         userId: session.user.id
       }
     });
-    revalidatePath("/inventory"); // لتحديث القوائم المنسدلة
-    revalidatePath("/categories"); // لتحديث جدول التصنيفات
+    revalidatePath("/dashboard/inventory"); // لتحديث القوائم المنسدلة
+    revalidatePath("/dashboard/category"); // لتحديث جدول التصنيفات
     return { success: true, data: category };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -76,8 +76,8 @@ export async function updateCategoryAction(id: string, name: string): Promise<Ac
       where: { id, userId: session.user.id },
       data: { name: name.trim() }
     });
-    revalidatePath("/inventory");
-    revalidatePath("/categories");
+    revalidatePath("/dashboard/inventory");
+    revalidatePath("/dashboard/category");
     return { success: true, data: updated };
   } catch (error) {
     return { success: false, error: "فشل في تحديث التصنيف" };
@@ -93,8 +93,8 @@ export async function deleteCategoryAction(id: string): Promise<ActionResponse<n
     await db.category.delete({
       where: { id, userId: session.user.id }
     });
-    revalidatePath("/inventory");
-    revalidatePath("/categories");
+    revalidatePath("/dashboard/inventory");
+    revalidatePath("/dashboard/category");
     return { success: true, data: null };
   } catch (error) {
     return { success: false, error: "فشل في حذف التصنيف. تأكد من عدم ارتباطه بمنتجات." };
@@ -113,8 +113,8 @@ export async function bulkDeleteCategoriesAction(ids: string[]): Promise<ActionR
         userId: session.user.id
       }
     });
-    revalidatePath("/inventory");
-    revalidatePath("/categories");
+    revalidatePath("/dashboard/inventory");
+    revalidatePath("/dashboard/category");
     return { success: true, data: null };
   } catch (error) {
     return { success: false, error: "فشل في حذف بعض التصنيفات" };

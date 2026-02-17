@@ -100,7 +100,7 @@ export async function createProductAction(data: {
       }
     });
 
-    revalidatePath("/inventory");
+    revalidatePath("/dashboard/inventory");
     return { success: true, data: product };
 
   } catch (error: unknown) {

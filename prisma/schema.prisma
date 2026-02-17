@@ -138,18 +138,18 @@ model Sale {
 model SaleItem {
     id              String   @id @default(cuid())
     saleId          String
-    productId       String
+    productId       String?  // ممتاز، للسماح بالـ Manual Entry
     quantity        Int
     
-    // السعر الأساسي قبل أي خصم
     originalPrice   Float    @default(0) 
-    // السعر النهائي الذي دفع للقطعة الواحدة
     priceUSD        Float    
-    // قيمة الخصم المطبق للقطعة الواحدة
     discountApplied Float    @default(0)
     
     sale            Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
-    product         Product  @relation(fields: [productId], references: [id])
+    
+    // التعديل هنا: أضف علامة الاستفهام بعد Product
+    product         Product? @relation(fields: [productId], references: [id])
+    itemName  String? // أضف هذا لتخزين اسم المنتج اليدوي (مثلاً: "تصليح شاشة")
 
     @@index([saleId])
 }

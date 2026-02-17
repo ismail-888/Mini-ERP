@@ -21,7 +21,7 @@ export async function updateExchangeRate(rate: number) {
     });
 
     // تحديث الكاش لكي تظهر القيمة الجديدة فوراً في الواجهة
-    revalidatePath("/");
+    revalidatePath("/dashboard", "layout");
     
     return { success: true };
   } catch (error) {

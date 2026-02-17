@@ -9,6 +9,7 @@ import { SaleStatus, PaymentType } from "@prisma/client";
 interface CreateSaleInput {
   items: {
     productId: string;
+    name: string; // أضفنا حقل الاسم هنا لاستلامه من الـ Frontend
     quantity: number;
     priceUSD: number; 
     originalPrice: number;
@@ -28,25 +29,32 @@ export async function createSaleAction(data: CreateSaleInput): Promise<ActionRes
   if (!session?.user) return { success: false, error: "Unauthorized" };
 
   try {
-    // زيادة الـ Timeout لـ 10 ثواني بدلاً من الـ default الصغير
     const result = await db.$transaction(async (tx) => {
       
-      // 1. جلب كل المنتجات المطلوبة مرة واحدة بدلاً من Loop (أسرع بكثير)
-      const productIds = data.items.map(i => i.productId);
-      const products = await tx.product.findMany({
-        where: { id: { in: productIds }, userId: session.user.id },
-        select: { id: true, currentStock: true, name: true }
-      });
+      const realItems = data.items.filter(item => !item.productId.startsWith("manual-"));
+      const realProductIds = realItems.map(i => i.productId);
+      let lowStockAlerts: string[] = [];
 
-      // 2. التحقق من المخزون في الذاكرة
-      for (const item of data.items) {
-        const product = products.find(p => p.id === item.productId);
-        if (!product || product.currentStock < item.quantity) {
-          throw new Error(`مخزون غير كافٍ لمنتج: ${product?.name || 'غير معروف'}`);
+      // 1. التحقق من المخزون للمنتجات الحقيقية
+      if (realProductIds.length > 0) {
+        const products = await tx.product.findMany({
+          where: { 
+            id: { in: realProductIds }, 
+            userId: session.user.id 
+          },
+          select: { id: true, currentStock: true, name: true, minStockAlert: true }
+        });
+
+        for (const item of realItems) {
+          const product = products.find(p => p.id === item.productId);
+          if (!product) throw new Error(`المنتج ${item.name} غير موجود`);
+          if (product.currentStock < item.quantity) {
+            throw new Error(`مخزون غير كافٍ لمنتج: ${product.name}`);
+          }
         }
       }
 
-      // 3. حساب رقم الفاتورة
+      // 2. حساب رقم الفاتورة
       const lastSale = await tx.sale.findFirst({
         where: { userId: session.user.id },
         orderBy: { invoiceNumber: 'desc' },
@@ -54,14 +62,13 @@ export async function createSaleAction(data: CreateSaleInput): Promise<ActionRes
       });
       const nextInvoiceNumber = (lastSale?.invoiceNumber || 0) + 1;
 
-      // 4. تحويل طريقة الدفع
       const paymentType = {
         card: PaymentType.CARD,
         split: PaymentType.SPLIT,
         cash: PaymentType.CASH,
       }[data.paymentMethod] || PaymentType.CASH;
 
-      // 5. إنشاء الفاتورة وتحديث المخزون (Prisma ستقوم بهما كـ Batch)
+      // 3. إنشاء الفاتورة مع itemName
       const sale = await tx.sale.create({
         data: {
           userId: session.user.id,
@@ -76,7 +83,8 @@ export async function createSaleAction(data: CreateSaleInput): Promise<ActionRes
           paidCardUSD: data.paidCardUSD,
           items: {
             create: data.items.map((item) => ({
-              productId: item.productId,
+              productId: item.productId.startsWith("manual-") ? null : item.productId,
+              itemName: item.name, // سيتم حفظ اسم المنتج هنا سواء كان يدوياً أو حقيقياً
               quantity: item.quantity,
               originalPrice: item.originalPrice,
               priceUSD: item.priceUSD,
@@ -84,33 +92,50 @@ export async function createSaleAction(data: CreateSaleInput): Promise<ActionRes
             })),
           },
         },
+        include: { items: true }
       });
 
-      // 6. تحديث المخزون لكل منتج
-      for (const item of data.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { currentStock: { decrement: item.quantity } },
+      // 4. تحديث المخزون بشكل مجمّع (Batch update)
+      if (realItems.length > 0) {
+        await Promise.all(
+          realItems.map(item =>
+            tx.product.update({
+              where: { id: item.productId },
+              data: { currentStock: { decrement: item.quantity } },
+            })
+          )
+        );
+
+        // 5. جلب المنتجات المحدثة للتحقق من التنبيهات
+        const updatedProducts = await tx.product.findMany({
+          where: { id: { in: realProductIds } },
+          select: { name: true, currentStock: true, minStockAlert: true }
         });
+
+        lowStockAlerts = updatedProducts
+          .filter(p => p.currentStock <= p.minStockAlert)
+          .map(p => `${p.name} (بقي ${p.currentStock} قطع)`);
       }
 
-      return sale;
+      return { ...sale, lowStockAlerts };
     }, {
-      maxWait: 5000, // وقت انتظار فتح العملية
-      timeout: 10000 // وقت تنفيذ العملية بالكامل
+      maxWait: 10000,
+      timeout: 15000 
     });
 
-    revalidatePath("/dashboard/pos");
-    revalidatePath("/dashboard/sales");
+    // Revalidate paths asynchronously (non-blocking)
+    Promise.all([
+      revalidatePath("/dashboard/pos"),
+      revalidatePath("/dashboard/inventory"),
+    ]).catch(console.error);
 
     return { success: true, data: result };
 
   } catch (error: any) {
-    console.error("SALE_ERROR:", error.message);
-    // تنظيف رسالة الخطأ للمستخدم
-    let friendlyError = "فشل في إتمام عملية البيع";
-    if (error.message.includes("مخزون غير كافٍ")) friendlyError = error.message;
-
-    return { success: false, error: friendlyError };
+    console.error("SALE_ERROR:", error);
+    return { 
+      success: false, 
+      error: error.message || "فشل في إتمام عملية البيع" 
+    };
   }
 }

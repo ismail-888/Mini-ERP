@@ -79,7 +79,7 @@ export async function updateProductAction(id: string, data: any): Promise<Action
       },
     });
 
-    revalidatePath("/inventory");
+    revalidatePath("/dashboard/inventory");
     return { success: true, data: updatedProduct };
   } catch (error) {
     console.error("Update Error:", error);
@@ -105,7 +105,7 @@ export async function deleteProductAction(id: string): Promise<ActionResponse<nu
 
     await db.product.delete({ where: { id, userId: session.user.id } });
 
-    revalidatePath("/inventory");
+    revalidatePath("/dashboard/inventory");
     return { success: true, data: null };
   } catch (error) {
     return { success: false, error: "فشل في حذف المنتج" };
@@ -135,7 +135,7 @@ export async function bulkDeleteProductsAction(ids: string[]): Promise<ActionRes
       where: { id: { in: ids }, userId: session.user.id },
     });
 
-    revalidatePath("/inventory");
+    revalidatePath("/dashboard/inventory");
     return { success: true, data: null };
   } catch (error) {
     return { success: false, error: "فشل في حذف المنتجات" };
