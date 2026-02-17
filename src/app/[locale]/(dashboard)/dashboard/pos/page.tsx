@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, ScanBarcode, ShoppingCart, X, Plus, Keyboard } from "lucide-react"
+import { Search, ScanBarcode, ShoppingCart, X, Keyboard } from "lucide-react"
 import { Input } from "~/components/ui/input"
 import { Button } from "~/components/ui/button"
 import { ProductGrid } from "~/components/dashboard/pos/product-grid"
 import { CartDrawer } from "~/components/dashboard/pos/cart-drawer"
 import { BarcodeScanner } from "~/components/dashboard/pos/barcode-scanner"
+import { ManualEntry } from "~/components/dashboard/pos/manual-entry"
 import { useCart } from "~/contexts/cart-context"
 import { getInventoryAction } from "~/server/actions/product/get-products"
 import type { Product } from "~/lib/types"
@@ -17,14 +18,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "~/components/ui/sheet"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog"
 
 
 export default function POSPage() {
@@ -34,9 +27,6 @@ export default function POSPage() {
   const [scannerOpen, setScannerOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [manualEntryOpen, setManualEntryOpen] = useState(false)
-  const [manualPrice, setManualPrice] = useState("")
-  const [manualName, setManualName] = useState("")
-  const [manualQty, setManualQty] = useState("1")
   const { itemCount, addItem } = useCart()
 
   // Fetch all products once on mount
@@ -76,39 +66,6 @@ export default function POSPage() {
     }
   }
 
-  const handleManualEntry = () => {
-    const price = Number.parseFloat(manualPrice)
-    const qty = Number.parseInt(manualQty) || 1
-
-    if (price > 0) {
-      // Create a temporary product for manual entry
-      const manualProduct: Product = {
-        id: `manual-${Date.now()}`,
-        name: manualName || "Custom Item",
-        barcode: `MANUAL-${Date.now()}`,
-        salePriceUSD: price,
-        costPriceUSD: price * 0.7, // Estimated cost
-        currentStock: 999,
-        minStockAlert: 0,
-        categoryId: null,
-        category: null,
-        brandId: null,
-        brand: null,
-      }
-
-      // Add the item multiple times based on quantity
-      for (let i = 0; i < qty; i++) {
-        addItem(manualProduct)
-      }
-
-      // Reset and close
-      setManualPrice("")
-      setManualName("")
-      setManualQty("1")
-      setManualEntryOpen(false)
-    }
-  }
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
   if (e.key === 'Enter' && searchQuery) {
     const product = products.find(p => p.barcode === searchQuery);
@@ -120,15 +77,12 @@ export default function POSPage() {
   }
 };
 
-  // Quick keypad values
-  const quickAmounts = [1, 5, 10, 20, 50, 100]
-
   return (
-    <div className="flex h-[calc(100vh-3.5rem-5rem)] flex-col lg:h-[calc(100vh-3.5rem)] lg:flex-row">
+    <div className="-m-4 -mb-24 lg:-m-6 lg:-mb-6 h-[calc(100vh-4rem)] overflow-hidden flex flex-col lg:flex-row">
       {/* Main Content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
         {/* Search Bar */}
-        <div className="border-b border-border bg-card p-4">
+        <div className="shrink-0 border-b border-border bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/80 p-3 lg:p-4">
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -190,21 +144,23 @@ export default function POSPage() {
                   <span className="sr-only">Open Cart</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-full p-0 sm:max-w-md">
-                <SheetHeader className="border-b border-border px-4 py-3">
-                  <SheetTitle>Current Cart</SheetTitle>
+              <SheetContent side="right" className="flex flex-col w-full p-0 sm:max-w-md overflow-hidden">
+                <SheetHeader className="shrink-0 border-b border-border px-4 py-3.5">
+                  <SheetTitle className="text-base">Current Cart</SheetTitle>
                 </SheetHeader>
-                <CartDrawer onClose={() => setCartOpen(false)} />
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <CartDrawer onClose={() => setCartOpen(false)} />
+                </div>
               </SheetContent>
             </Sheet>
           </div>
         </div>
 
         {/* Product Grid */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 lg:p-4 bg-background">
           {loading ? (
             <div className="flex h-64 items-center justify-center">
-              <p className="text-muted-foreground">Loading products...</p>
+              <p className="text-sm text-muted-foreground">Loading products...</p>
             </div>
           ) : (
             <ProductGrid products={displayedProducts} />
@@ -213,11 +169,13 @@ export default function POSPage() {
       </div>
 
       {/* Desktop Cart Sidebar */}
-      <aside className="hidden w-96 border-l border-border bg-card lg:block">
-        <div className="border-b border-border px-4 py-3">
-          <h2 className="text-lg font-semibold">Current Cart</h2>
+      <aside className="hidden w-96 border-l border-border bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/80 lg:flex lg:flex-col overflow-hidden">
+        <div className="shrink-0 border-b border-border p-5.5">
+          <h2 className="text-base font-semibold">Current Cart</h2>
         </div>
-        <CartDrawer />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <CartDrawer />
+        </div>
       </aside>
 
       {/* Barcode Scanner Modal */}
@@ -228,94 +186,11 @@ export default function POSPage() {
       />
 
       {/* Manual Entry Modal */}
-      <Dialog open={manualEntryOpen} onOpenChange={setManualEntryOpen}>
-        <DialogContent className="sm:max-w-md p-2">
-          <DialogHeader>
-            <DialogTitle>Manual Entry</DialogTitle>
-            <DialogDescription>
-              Add a product without barcode by entering the price manually.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Item Name (Optional) */}
-            <div className="space-y-2">
-              <label htmlFor="manualName">Item Name (Optional)</label>
-              <Input
-                id="manualName"
-                value={manualName}
-                onChange={(e) => setManualName(e.target.value)}
-                placeholder="Custom Item"
-              />
-            </div>
-
-            {/* Price Input */}
-            <div className="space-y-2">
-              <label htmlFor="manualPrice">Price (USD) *</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  id="manualPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={manualPrice}
-                  onChange={(e) => setManualPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="pl-7 text-lg"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            {/* Quick Amount Buttons */}
-            <div className="grid grid-cols-3 gap-2">
-              {quickAmounts.map((amount) => (
-                <Button
-                  key={amount}
-                  type="button"
-                  variant="outline"
-                  onClick={() => setManualPrice(amount.toString())}
-                  className="h-12 text-lg"
-                >
-                  ${amount}
-                </Button>
-              ))}
-            </div>
-
-            {/* Quantity */}
-            <div className="space-y-2">
-              <label htmlFor="manualQty">Quantity</label>
-              <Input
-                id="manualQty"
-                type="number"
-                min="1"
-                value={manualQty}
-                onChange={(e) => setManualQty(e.target.value)}
-                className="text-center"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setManualEntryOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleManualEntry}
-              disabled={!manualPrice || Number.parseFloat(manualPrice) <= 0}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add to Cart
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ManualEntry
+        open={manualEntryOpen}
+        onOpenChange={setManualEntryOpen}
+        onAddItem={addItem}
+      />
     </div>
   )
 }

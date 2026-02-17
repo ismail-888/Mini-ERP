@@ -9,7 +9,7 @@ import { useExchangeRate } from "~/contexts/exchange-rate-context"
 // import { cn } from "~/lib/utils"
 
 interface CartDrawerProps {
-  onClose?: () => void
+  onClose?: () => void;
 }
 
 export function CartDrawer({ onClose }: CartDrawerProps) {
@@ -28,22 +28,22 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
   if (items.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-          <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
+          <ShoppingBag className="h-8 w-8 text-muted-foreground/50" />
         </div>
-        <p className="text-lg font-medium text-foreground">Cart is empty</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add products to start a sale
+        <p className="text-base font-semibold text-foreground">Cart is empty</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Scan or add products to start a sale
         </p>
       </div>
     )
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem-3.5rem)] flex-col lg:h-[calc(100vh-3.5rem-3.5rem)]">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Cart Items */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 lg:p-4">
+        <div className="space-y-2.5 lg:space-y-3">
           {items.map((item) => {
             const effectivePrice = getEffectivePrice(item)
             const hasDiscount = effectivePrice < item.salePriceUSD
@@ -52,44 +52,42 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
             return (
               <div
                 key={item.id}
-                className="rounded-lg border border-border bg-card p-3"
+                className="group rounded-lg border border-border bg-card p-2.5 lg:p-3 transition-all hover:border-muted-foreground/20 hover:shadow-sm"
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-2.5">
                   {/* Product Image Placeholder */}
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted">
-                    <span className="text-lg text-muted-foreground/50">
-                      {item.name.charAt(0)}
-                    </span>
+                  <div className="flex h-12 w-12 lg:h-14 lg:w-14 shrink-0 items-center justify-center rounded-md bg-muted/50 text-base lg:text-lg font-medium text-muted-foreground/50 transition-colors group-hover:bg-muted">
+                    {item.name.charAt(0)}
                   </div>
 
                   {/* Product Info */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="truncate text-sm font-medium">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="truncate text-xs lg:text-sm font-medium text-foreground">
                           {item.name}
                         </h4>
-                        <div className="mt-0.5 flex items-center gap-2">
+                        <div className="mt-0.5 flex items-center gap-1.5">
                           {hasDiscount ? (
                             <>
-                              <span className="text-xs text-muted-foreground line-through">
+                              <span className="text-[10px] text-muted-foreground line-through">
                                 {formatUSD(item.salePriceUSD)}
                               </span>
-                              <span className="text-sm font-medium text-primary">
+                              <span className="text-xs font-medium text-primary">
                                 {formatUSD(effectivePrice)}
                               </span>
                               <Badge
                                 variant="secondary"
-                                className="h-5 gap-0.5 px-1.5 text-[10px]"
+                                className="h-4 gap-0.5 px-1 text-[9px]"
                               >
-                                <Percent className="h-2.5 w-2.5" />
+                                <Percent className="h-2 w-2" />
                                 {item.discountType === "fixed"
                                   ? `-$${item.discountValue}`
                                   : `-${item.discountValue}%`}
                               </Badge>
                             </>
                           ) : (
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {formatUSD(item.salePriceUSD)} each
                             </span>
                           )}
@@ -99,33 +97,33 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                         onClick={() => removeItem(item.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
 
                     {/* Quantity Controls & Line Total */}
                     <div className="mt-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 lg:gap-2">
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 bg-transparent"
+                          className="h-7 w-7 lg:h-8 lg:w-8 bg-background transition-colors"
                           onClick={() =>
                             updateQuantity(item.id, item.quantity - 1)
                           }
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-6 text-center text-sm font-medium">
+                        <span className="w-6 lg:w-7 text-center text-xs lg:text-sm font-semibold">
                           {item.quantity}
                         </span>
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 bg-transparent"
+                          className="h-7 w-7 lg:h-8 lg:w-8 bg-background transition-colors"
                           onClick={() =>
                             updateQuantity(item.id, item.quantity + 1)
                           }
@@ -133,7 +131,7 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
-                      <span className="font-semibold">{formatUSD(lineTotal)}</span>
+                      <span className="text-sm lg:text-base font-bold">{formatUSD(lineTotal)}</span>
                     </div>
                   </div>
                 </div>
@@ -144,25 +142,25 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
       </div>
 
       {/* Cart Summary */}
-      <div className="border-t border-border bg-muted/30 p-4">
-        <div className="mb-4 space-y-2">
-          <div className="flex items-center justify-between text-sm">
+      <div className="shrink-0 border-t border-border bg-muted/50 dark:bg-muted/20 p-3 lg:p-4">
+        <div className="mb-3 space-y-2">
+          <div className="flex items-center justify-between text-xs lg:text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>{formatUSD(subtotalUSD)}</span>
+            <span className="font-medium">{formatUSD(subtotalUSD)}</span>
           </div>
           {totalDiscountUSD > 0 && (
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-xs lg:text-sm">
               <span className="text-muted-foreground">Discount</span>
-              <span className="text-primary">-{formatUSD(totalDiscountUSD)}</span>
+              <span className="font-medium text-primary">-{formatUSD(totalDiscountUSD)}</span>
             </div>
           )}
           <div className="flex items-center justify-between border-t border-border pt-2">
-            <span className="text-lg font-semibold">Total</span>
+            <span className="text-base lg:text-lg font-bold">Total</span>
             <div className="text-right">
-              <p className="text-xl font-bold text-foreground">
+              <p className="text-lg lg:text-xl font-bold text-foreground">
                 {formatUSD(totalUSD)}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[10px] lg:text-xs text-muted-foreground">
                 {formatLBP(convertToLBP(totalUSD))}
               </p>
             </div>
@@ -170,14 +168,14 @@ export function CartDrawer({ onClose }: CartDrawerProps) {
         </div>
 
         <div className="space-y-2">
-          <Button className="w-full" size="lg" asChild>
+          <Button className="w-full h-11 text-sm font-semibold shadow-sm" asChild>
             <Link href="/dashboard/pos/checkout" onClick={onClose}>
               Checkout
             </Link>
           </Button>
           <Button
             variant="outline"
-            className="w-full bg-transparent"
+            className="w-full h-9 bg-background hover:bg-muted text-xs font-medium"
             onClick={() => {
               clearCart()
               onClose?.()

@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Percent } from "lucide-react"
+import { Plus, Percent, Package } from "lucide-react"
 import { Card, CardContent } from "~/components/ui/card"
 import { Button } from "~/components/ui/button"
 import { Badge } from "~/components/ui/badge"
@@ -31,10 +31,13 @@ export function ProductGrid({ products }: ProductGridProps) {
   if (products.length === 0) {
     return (
       <div className="flex h-64 flex-col items-center justify-center text-center">
-        <p className="text-lg font-medium text-muted-foreground">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
+          <Package className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <p className="text-base font-semibold text-foreground">
           No products found
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           Try adjusting your search or scan a barcode
         </p>
       </div>
@@ -42,7 +45,7 @@ export function ProductGrid({ products }: ProductGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
       {products.map((product) => {
         const isOutOfStock = product.currentStock === 0
         const isLowStock =
@@ -54,23 +57,23 @@ export function ProductGrid({ products }: ProductGridProps) {
           <Card
             key={product.id}
             className={cn(
-              "relative overflow-hidden transition-all",
+              "group relative overflow-hidden transition-all duration-200",
               isOutOfStock
-                ? "opacity-60"
-                : "cursor-pointer hover:border-primary hover:shadow-md"
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-pointer hover:scale-[1.02] hover:border-primary/50 hover:shadow-md dark:hover:shadow-primary/5"
             )}
           >
-            <CardContent className="p-3">
+            <CardContent className="p-2.5 lg:p-3">
               {/* Product Image Placeholder */}
-              <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-muted flex items-center justify-center">
-                <span className="text-3xl text-muted-foreground/50">
+              <div className="relative mb-2 lg:mb-2.5 aspect-square overflow-hidden rounded-lg bg-linear-to-br from-muted/50 to-muted flex items-center justify-center transition-colors group-hover:from-muted/70 group-hover:to-muted/90">
+                <span className="text-2xl lg:text-3xl font-semibold text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
                   {product.name.charAt(0)}
                 </span>
 
                 {/* Discount Badge */}
                 {hasDiscount && (
-                  <Badge className="absolute left-1.5 top-1.5 gap-0.5 bg-primary px-1.5 py-0.5 text-[10px]">
-                    <Percent className="h-2.5 w-2.5" />
+                  <Badge className="absolute left-1.5 top-1.5 gap-0.5 bg-primary/90 backdrop-blur-sm px-1.5 py-0.5 text-[9px] lg:text-[10px] font-semibold shadow-sm">
+                    <Percent className="h-2 w-2 lg:h-2.5 lg:w-2.5" />
                     {product.discountType === "fixed"
                       ? `-$${product.discountValue}`
                       : `-${product.discountValue}%`}
@@ -82,7 +85,7 @@ export function ProductGrid({ products }: ProductGridProps) {
               {isOutOfStock && (
                 <Badge
                   variant="destructive"
-                  className="absolute right-2 top-2 text-[10px]"
+                  className="absolute right-1.5 top-1.5 text-[9px] lg:text-[10px] font-semibold shadow-sm"
                 >
                   Out of Stock
                 </Badge>
@@ -90,42 +93,43 @@ export function ProductGrid({ products }: ProductGridProps) {
               {isLowStock && !isOutOfStock && (
                 <Badge
                   variant="outline"
-                  className="absolute right-2 top-2 border-warning bg-warning/10 text-[10px] text-warning-foreground"
+                  className="absolute right-1.5 top-1.5 border-warning bg-warning/10 backdrop-blur-sm text-[9px] lg:text-[10px] font-semibold text-warning-foreground shadow-sm"
                 >
                   Low Stock
                 </Badge>
               )}
 
               {/* Product Info */}
-              <div className="space-y-1">
-                <h3 className="line-clamp-2 text-sm font-medium leading-tight">
+              <div className="space-y-0.5 lg:space-y-1">
+                <h3 className="line-clamp-2 text-xs lg:text-sm font-semibold leading-tight ">
                   {product.name}
                 </h3>
-                <p className="text-xs text-muted-foreground">
-                  {product.brand && <span>{typeof product.brand === 'string' ? product.brand : product.brand.name} / </span>}
-                  {typeof product.category === 'string' ? product.category : product.category?.name}
+                <p className="text-[10px] lg:text-xs text-muted-foreground truncate">
+                  {product.brand && <span className="font-medium">{typeof product.brand === 'string' ? product.brand : product.brand.name}</span>}
+                  {product.brand && product.category && <span className="mx-1">•</span>}
+                  {product.category && <span>{typeof product.category === 'string' ? product.category : product.category?.name}</span>}
                 </p>
-                <div className="pt-1">
+                <div className="pt-0.5 lg:pt-1">
                   {hasDiscount ? (
                     <>
-                      <div className="flex items-center gap-2">
-                        <p className="text-base font-bold text-primary">
+                      <div className="flex items-center gap-1.5 lg:gap-2">
+                        <p className="text-sm lg:text-base font-bold text-primary">
                           {formatUSD(effectivePrice)}
                         </p>
-                        <p className="text-xs text-muted-foreground line-through">
+                        <p className="text-[10px] lg:text-xs text-muted-foreground line-through">
                           {formatUSD(product.salePriceUSD)}
                         </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] lg:text-xs text-muted-foreground truncate">
                         {formatLBP(convertToLBP(effectivePrice))}
                       </p>
                     </>
                   ) : (
                     <>
-                      <p className="text-base font-bold text-foreground">
+                      <p className="text-sm lg:text-base font-bold text-foreground">
                         {formatUSD(product.salePriceUSD)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] lg:text-xs text-muted-foreground truncate">
                         {formatLBP(convertToLBP(product.salePriceUSD))}
                       </p>
                     </>
@@ -136,12 +140,12 @@ export function ProductGrid({ products }: ProductGridProps) {
               {/* Add Button */}
               <Button
                 size="sm"
-                className="mt-3 w-full"
+                className="mt-2 lg:mt-2.5 w-full h-8 lg:h-9 text-xs lg:text-sm font-semibold shadow-sm transition-all group-hover:shadow-md"
                 disabled={isOutOfStock}
                 onClick={() => addItem(product)}
               >
-                <Plus className="mr-1 h-4 w-4" />
-                Add
+                <Plus className="mr-1 h-3 w-3 lg:h-3.5 lg:w-3.5" />
+                Add to Cart
               </Button>
             </CardContent>
           </Card>
