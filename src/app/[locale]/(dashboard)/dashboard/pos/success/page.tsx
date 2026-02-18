@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import { MessageCircle, Printer, Plus, Download, Store, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -10,27 +10,61 @@ import { Separator } from "~/components/ui/separator"
 import { useExchangeRate } from "~/contexts/exchange-rate-context"
 import confetti from "canvas-confetti"
 import { toast } from "sonner"
-import html2canvas from "html2canvas"
+import { getSaleById } from "~/server/actions/sales/get-sale"
+import { useThermalPrinter } from "~/components/dashboard/pos/thermal-print"
+import { useReceiptImage } from "~/components/dashboard/pos/receipt-image"
 
 export default function SuccessPage() {
   const searchParams = useSearchParams()
   const { formatUSD, formatLBP, rate } = useExchangeRate()
-  const receiptRef = useRef<HTMLDivElement>(null)
+  const { printReceipt } = useThermalPrinter()
+  const { generateReceiptImage } = useReceiptImage()
   const hasShownToast = useRef(false)
-
-  // استخراج البيانات
-  const invoiceNumber = searchParams.get("invoiceNumber") || "N/A"
-  const totalUSD = Number(searchParams.get("total")) || 0
-  const changeUSD = Number(searchParams.get("change")) || 0
-  const itemsRaw = searchParams.get("items")
-  const items = itemsRaw ? JSON.parse(decodeURIComponent(itemsRaw)) : []
-
-  // استخراج تنبيهات المخزون من الـ URL
-  const lowStockRaw = searchParams.get("lowStock")
-  const lowStockAlerts = lowStockRaw ? JSON.parse(decodeURIComponent(lowStockRaw)) : []
+  
+  const id = searchParams.get("id")
+  const [sale, setSale] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (hasShownToast.current) return
+    if (!id) {
+      setLoading(false)
+      return
+    }
+    const fetchSale = async () => {
+      try {
+        const data = await getSaleById(id)
+        if (data) setSale(data)
+      } catch (error) {
+        console.error("Failed to fetch sale", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    void fetchSale()
+  }, [id])
+
+  // استخراج البيانات
+  const invoiceNumber = sale?.invoiceNumber || "N/A"
+  const totalUSD = sale?.totalUSD || 0
+  
+  // Calculate payments to determine exact change
+  const paidCash = sale?.paidCashUSD || 0
+  const paidCard = sale?.paidCardUSD || 0
+  const paidLBP_inUSD = (sale?.paidCashLBP || 0) / (sale?.exchangeRate || 1)
+  const totalPaid = paidCash + paidCard + paidLBP_inUSD
+  
+  const changeUSD = Math.max(0, totalPaid - totalUSD)
+  
+  const items = sale?.items?.map((i: any) => ({
+    name: i.itemName,
+    quantity: i.quantity,
+    price: i.priceUSD
+  })) || []
+  
+  const lowStockAlerts: string[] = [] // Low stock alerts are shown on checkout, not persisted here easily unless stored on sale
+
+  useEffect(() => {
+    if (loading || !sale || hasShownToast.current) return
     hasShownToast.current = true
 
     toast.success("Payment Received!", {
@@ -49,204 +83,73 @@ export default function SuccessPage() {
     fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 })
     fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 })
     fire(0.1, { spread: 120, startVelocity: 45 })
-  }, [invoiceNumber])
+  }, [loading, sale, invoiceNumber])
+
+  if (loading) {
+    return (
+      <div className="flex bg-background h-[calc(100vh-4rem)] w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Loading receipt details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!sale) {
+    return (
+      <div className="flex bg-background h-[calc(100vh-4rem)] w-full items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold">Receipt not found</h2>
+          <Button asChild className="mt-4">
+            <Link href="/dashboard/pos">Back to POS</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const timestamp = new Date().toLocaleString("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
   })
-
   
+
   const handleThermalPrint = () => {
-    const thermalHTML = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-              @page {
-                  size: 80mm auto;
-                  margin: 0;
-              }
-              
-              * {
-                  margin: 0;
-                  padding: 0;
-                  box-sizing: border-box;
-              }
-              
-              body {
-                  font-family: Arial, sans-serif;
-                  font-size: 13.6px;
-                  margin: 0;
-                  padding: 5px;
-                  width: 80mm;
-                  background: white;
-              }
-              
-              .header, .footer {
-                  text-align: center;
-                  margin-bottom: 5px;
-              }
-              
-              .footer {
-                  margin-top: 10px;
-              }
-              
-              .info {
-                  margin-bottom: 3px;
-                  font-size: 14px;
-              }
-              
-              .info-bold {
-                  margin-bottom: 3px;
-                  font-size: 14px;
-                  font-weight: bold;
-              }
-              
-              table {
-                  width: 100%;
-                  border-collapse: collapse;
-                  margin-top: 5px;
-              }
-              
-              th, td {
-                  text-align: left;
-                  border-bottom: 1px dashed #000;
-                  padding: 2px 4px;
-                  font-size: 12.6px;
-              }
-              
-              th {
-                  border-bottom: 1px solid #000;
-                  font-weight: bold;
-              }
-              
-              .total {
-                  text-align: right;
-                  margin-top: 5px;
-                  font-weight: bold;
-                  font-size: 14px;
-              }
-              
-              .center {
-                  text-align: center;
-              }
-              
-              .right {
-                  text-align: right;
-              }
-              
-              .divider {
-                  border-top: 1px dashed #000;
-                  margin: 5px 0;
-              }
-              
-              .logo {
-                  text-align: center;
-                  margin-bottom: 10px;
-              }
-              
-              @media print {
-                  body {
-                      width: 80mm;
-                  }
-              }
-          </meta>
-      </head>
-      <body>
-          <div class="header">
-              <div class="logo">
-                  <div style="font-size: 24px;">🏪</div>
-              </div>
-              <h3>LUXURY BOUTIQUE</h3>
-              <div class="info">Official Receipt</div>
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="info">Invoice #: ${invoiceNumber}</div>
-          <div class="info">Date: ${timestamp}</div>
-
-          <div class="divider"></div>
-
-          <table>
-              <thead>
-                  <tr>
-                      <th style="width: 50%;">Item</th>
-                      <th style="width: 15%;">Qty</th>
-                      <th style="width: 20%;">Price</th>
-                      <th style="width: 15%;">Total</th>
-                  </tr>
-              </thead>
-              <tbody>
-                  ${items.map((item: any) => `
-                      <tr>
-                          <td>${item.name}</td>
-                          <td class="center">${item.quantity}</td>
-                          <td class="right">${formatUSD(item.price)}</td>
-                          <td class="right">${formatUSD(item.price * item.quantity)}</td>
-                      </tr>
-                  `).join('')}
-              </tbody>
-          </table>
-
-          <div class="divider"></div>
-
-          <div class="total">TOTAL (USD): ${formatUSD(totalUSD)}</div>
-          <div class="total">TOTAL (LBP): ${formatLBP(totalUSD * rate)}</div>
-          ${changeUSD > 0 ? `<div class="total">CHANGE: ${formatUSD(changeUSD)}</div>` : ''}
-
-          <div class="footer">
-              <div class="info">*** Thank You ***</div>
-          </div>
-      </body>
-      </html>
-    `
-
-    // Create a new window for printing (better than iframe)
-    const printWindow = window.open('', '', 'width=302,height=auto')
-    if (!printWindow) {
-      toast.error("Please allow popups to print receipts")
-      return
-    }
-
-    printWindow.document.open()
-    printWindow.document.write(thermalHTML)
-    printWindow.document.close()
-
-    // Wait for content to load then print
-    printWindow.onload = () => {
-      printWindow.focus()
-      setTimeout(() => {
-        printWindow.print()
-        // Close after printing
-        printWindow.onafterprint = () => {
-          printWindow.close()
-        }
-      }, 250)
-    }
+    printReceipt({
+      invoiceNumber,
+      timestamp,
+      items,
+      totalUSD,
+      totalLBP: totalUSD * rate,
+      changeUSD,
+      formatUSD,
+      formatLBP,
+      rate
+    })
   }
 
-  // Save as image using html2canvas
+  // Save as image using hidden generator
+//   Why "Save as Image"?
+// In a modern POS system, this feature is essentially a "Digital Receipt" generator.
+
+// WhatsApp/Social Sharing: In countries like Lebanon (implied by LBP currency), many customers prefer receiving a receipt via WhatsApp rather than a paper slip that they'll lose. An image is perfect for this.
+// No Printer Scenarios: If the thermal printer runs out of paper or jams, the cashier can save the image and send it to the customer or print it later.
+
   const handleSaveAsImage = async () => {
-    if (!receiptRef.current) return
-    
     toast.loading("Generating receipt image...", { id: "receipt-save" })
-    
     try {
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      } as any)
-      
-      const link = document.createElement("a")
-      link.href = canvas.toDataURL("image/png")
-      link.download = `Invoice-${invoiceNumber}.png`
-      link.click()
-      
+      await generateReceiptImage({
+        invoiceNumber,
+        timestamp,
+        items,
+        totalUSD,
+        totalLBP: totalUSD * rate,
+        changeUSD,
+        formatUSD,
+        formatLBP,
+        rate
+      })
       toast.success("Receipt saved successfully!", { id: "receipt-save" })
     } catch (error) {
       console.error("Failed to generate image:", error)
@@ -289,7 +192,7 @@ export default function SuccessPage() {
         
         {/* Modern Invoice/Receipt Card - Scrollable */}
         <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent print:overflow-visible">
-          <div ref={receiptRef} className="rounded-3xl bg-white dark:bg-slate-900 p-2 shadow-2xl shadow-slate-200/60 dark:shadow-black/40 print:shadow-none">
+          <div className="rounded-3xl bg-white dark:bg-slate-900 p-2 shadow-2xl shadow-slate-200/60 dark:shadow-black/40 print:shadow-none">
             <Card className="border-none shadow-none overflow-hidden rounded-4xl dark:bg-slate-900">
               <CardContent className="p-4 space-y-4">
                 
@@ -378,8 +281,14 @@ export default function SuccessPage() {
         {/* Action Buttons - Modern Style - Fixed at bottom */}
         <div className="shrink-0 space-y-3">
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={handleSaveAsImage}>
-              <Download className="mr-2 h-4 w-4" /> Save
+            <Button 
+              variant="outline" 
+              className="flex-1 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" 
+              onClick={handleSaveAsImage}
+            >
+              <Download className="mr-2 h-4 w-4" /> 
+              {/* On mobile this will actually open the Share Sheet */}
+              Save / Share Image
             </Button>
     
             <Button variant="outline" className="flex-1 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={handleThermalPrint}>

@@ -111,20 +111,10 @@ export default function CheckoutPage() {
           });
         }
 
-        // تحضير الـ Query String لصفحة النجاح والإيصال
-        const itemsQuery = encodeURIComponent(
-          JSON.stringify(
-            itemsData.map((i) => ({
-              name: i.name,
-              quantity: i.quantity,
-              price: i.priceUSD,
-            })),
-          ),
-        );
 
         // الانتقال لصفحة النجاح أولاً
         router.push(
-          `/dashboard/pos/success?id=${result.data.id}&invoiceNumber=${result.data.invoiceNumber}&total=${totalUSD}&change=${paymentCalc.changeUSD}&items=${itemsQuery}`,
+          `/dashboard/pos/success?id=${result.data.id}`,
         );
 
         // Clear cart AFTER navigation starts
