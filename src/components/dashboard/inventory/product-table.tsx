@@ -8,6 +8,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { useExchangeRate } from "~/contexts/exchange-rate-context"
 import type { Product } from "~/lib/types"
 import { cn } from "~/lib/utils"
+import Image from "next/image"
 
 interface ProductTableProps {
   products: Product[]

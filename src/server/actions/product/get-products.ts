@@ -51,7 +51,7 @@ export async function getProductByIdAction(id: string): Promise<ActionResponse<P
     if (!product) return { success: false, error: "Product not found" };
     
     return { success: true, data: product };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "Failed to fetch product" };
   }
 }
@@ -69,9 +69,9 @@ export async function updateProductAction(id: string, data: any): Promise<Action
       where: { id, userId: session.user.id },
       data: {
         ...rest,
-        barcode: rest.barcode?.trim() || null,
-        categoryId: categoryId || null,
-        brandId: brandId || null,
+        barcode: rest.barcode?.trim() ?? null,
+        categoryId: categoryId ?? null,
+        brandId: brandId ?? null,
       },
       include: {
         category: true,
@@ -107,7 +107,7 @@ export async function deleteProductAction(id: string): Promise<ActionResponse<nu
 
     revalidatePath("/dashboard/inventory");
     return { success: true, data: null };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في حذف المنتج" };
   }
 }
@@ -137,7 +137,7 @@ export async function bulkDeleteProductsAction(ids: string[]): Promise<ActionRes
 
     revalidatePath("/dashboard/inventory");
     return { success: true, data: null };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في حذف المنتجات" };
   }
 }

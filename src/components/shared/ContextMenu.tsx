@@ -7,11 +7,11 @@ interface ContextMenuPosition {
   y: number
 }
 
-interface ContextMenuProps {
+interface ContextMenuProps<T = unknown> {
   position: ContextMenuPosition | null
-  row: any
-  onView?: (row: any) => void
-  onEdit?: (row: any) => void
+  row: T
+  onView?: (row: T) => void
+  onEdit?: (row: T) => void
   onDelete?: (id: string) => void | Promise<void>
   showView?: boolean
   showEdit?: boolean
@@ -19,7 +19,7 @@ interface ContextMenuProps {
   onClose?: () => void
 }
 
-export function ContextMenu({
+export function ContextMenu<T extends { id?: string | number }>({
   position,
   row,
   onView,
@@ -29,10 +29,10 @@ export function ContextMenu({
   showEdit = true,
   showDelete = true,
   onClose,
-}: ContextMenuProps) {
+}: ContextMenuProps<T>) {
   if (!position || !row) return null
 
-  const handleClick = (callback?: (row: any) => void) => {
+  const handleClick = (callback?: (row: T) => void) => {
     callback?.(row)
     onClose?.()
   }
@@ -65,10 +65,10 @@ export function ContextMenu({
           <Pencil className="h-4 w-4" /> Edit
         </button>
       )}
-      {showDelete && onDelete && (
+      {showDelete && onDelete && row.id !== undefined && (
         <button
           className="w-full text-left px-3 py-2 hover:bg-muted flex items-center gap-2 text-sm text-destructive"
-          onClick={() => handleClick(() => onDelete(row.id))}
+          onClick={() => handleClick(() => { void onDelete(row.id as string) })}
         >
           <Trash2 className="h-4 w-4" /> Delete
         </button>

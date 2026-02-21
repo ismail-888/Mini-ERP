@@ -65,7 +65,7 @@ export function AddBrandDialog({ open, onClose, onAdd, onEdit, brand, isLoading 
         const result = await updateBrandAction(brand.id, values.name)
         if (result?.success) {
           toast.success("تم تحديث العلامة التجارية")
-          onEdit?.(result.data)
+          onEdit?.(result.data as Brand)
           handleClose()
         } else {
           toast.error(result?.error ?? "خطأ أثناء التحديث")
@@ -74,7 +74,7 @@ export function AddBrandDialog({ open, onClose, onAdd, onEdit, brand, isLoading 
         const result = await createBrandAction(values.name)
         if (result?.success) {
           toast.success("تم إضافة العلامة التجارية")
-          onAdd?.(result.data)
+          onAdd?.(result.data as Brand)
           handleClose()
         } else {
           toast.error(result?.error ?? "خطأ أثناء الإنشاء")

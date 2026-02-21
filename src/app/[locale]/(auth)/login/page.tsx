@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { LoginForm } from "~/components/auth/login-form";
 import { Link } from "~/i18n/routing";
-import { ArrowLeft, Home } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export default async function LoginPage() {
   const t = await getTranslations("auth");

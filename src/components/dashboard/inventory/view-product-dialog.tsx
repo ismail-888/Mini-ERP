@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { type Product } from "~/lib/types";
+import Image from "next/image";
 
 interface ViewProductDialogProps {
   open: boolean;
@@ -70,8 +71,8 @@ export default function ViewProductDialog({ open, productId, onClose }: ViewProd
           ) : product ? (
             <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
               <div className="col-span-1 flex items-start justify-center">
-                <div className="w-32 sm:w-40">
-                  <img src={product.image ?? '/placeholder.svg'} alt={product.name} className="rounded-lg object-cover w-full h-32 sm:h-40 border" />
+                <div className="w-32 sm:w-40 relative h-32 sm:h-40">
+                  <Image src={product.image ?? '/placeholder.svg'} alt={product.name} fill className="rounded-lg object-cover border" unoptimized />
                 </div>
               </div>
 

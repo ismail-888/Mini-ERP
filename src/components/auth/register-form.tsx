@@ -52,7 +52,7 @@ export function RegisterForm() {
           setSuccess(data.success);
           form.reset(); // تفريغ الحقول عند النجاح
         }
-      } catch (err) {
+      } catch (_err) {
         setError("Something went wrong!");
       }
     });

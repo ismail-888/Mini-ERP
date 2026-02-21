@@ -293,6 +293,9 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       data-sidebar="rail"
       data-slot="sidebar-rail"
       // ... props الأخرى
+      aria-label="Toggle Sidebar"
+      tabIndex={-1}
+      onClick={toggleSidebar}
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:inline-start-1/2 after:w-[2px] sm:flex",
         // التعديل: نستخدم inline-end ليكون دائماً في "نهاية" السايدبار بغض النظر عن اللغة

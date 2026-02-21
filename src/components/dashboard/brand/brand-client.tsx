@@ -80,7 +80,7 @@ export function BrandClient({ initialBrands }: BrandClientProps) {
           toast.success('Brand deleted successfully')
           router.refresh()
         } else {
-          toast.error(result.error || 'Failed to delete brand')
+          toast.error(result.error ?? 'Failed to delete brand')
         }
       } else {
         const result = await bulkDeleteBrandsAction(deletingIds)
@@ -88,7 +88,7 @@ export function BrandClient({ initialBrands }: BrandClientProps) {
           toast.success(`${deletingIds.length} brands deleted successfully`)
           router.refresh()
         } else {
-          toast.error(result.error || 'Failed to delete brands')
+          toast.error(result.error ?? 'Failed to delete brands')
         }
       }
     } catch (err) {

@@ -28,7 +28,7 @@ import BulkActionsBar from "./BulkActionsBar";
 import TablePagination from "./TablePagination";
 import { ContextMenu } from "~/components/shared/ContextMenu";
 
-type DataTableProps<TData> = {
+type DataTableProps<TData extends { id?: string | number }> = {
   data: TData[];
   columns: ColumnDef<TData, unknown>[];
   tableName: string;
@@ -174,7 +174,7 @@ function DateFilterInput<TData, TValue>({
   );
 }
 
-export function DataTable<TData>({
+export function DataTable<TData extends { id?: string | number }>({
   data,
   columns,
   tableName,
@@ -521,7 +521,7 @@ export function DataTable<TData>({
       </div>
 
       {/* Context Menu */}
-      {enableContextMenu && (
+      {enableContextMenu && ctxRow && (
         <ContextMenu
           position={ctxPos}
           row={ctxRow}

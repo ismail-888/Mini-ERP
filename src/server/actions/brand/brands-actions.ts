@@ -22,7 +22,7 @@ export async function getBrandsAction(): Promise<ActionResponse<any[]>> {
       orderBy: { name: "asc" }
     });
     return { success: true, data: brands };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في جلب العلامات التجارية" };
   }
 }
@@ -38,7 +38,7 @@ export async function getBrandByIdAction(id: string): Promise<ActionResponse<any
     });
     if (!brand) return { success: false, error: "الماركة غير موجودة" };
     return { success: true, data: brand };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "حدث خطأ أثناء جلب البيانات" };
   }
 }
@@ -79,7 +79,7 @@ export async function updateBrandAction(id: string, name: string): Promise<Actio
     revalidatePath("/dashboard/inventory");
     revalidatePath("/dashboard/brand");
     return { success: true, data: updated };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في تحديث الماركة" };
   }
 }
@@ -96,7 +96,7 @@ export async function deleteBrandAction(id: string): Promise<ActionResponse<null
     revalidatePath("/dashboard/inventory");
     revalidatePath("/dashboard/brand");
     return { success: true, data: null };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في حذف الماركة" };
   }
 }
@@ -116,7 +116,7 @@ export async function bulkDeleteBrandsAction(ids: string[]): Promise<ActionRespo
     revalidatePath("/dashboard/inventory");
     revalidatePath("/dashboard/brand");
     return { success: true, data: null };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في حذف الماركات المحددة" };
   }
 }

@@ -170,7 +170,7 @@ export function useReceiptImage() {
             files: [file],
           });
           return true; // Use the native mobile drawer
-        } catch (err) {
+        } catch (_err) {
           // User cancelled share or feature failed, fallback to download
           console.log("Share cancelled or failed, falling back to download");
         }

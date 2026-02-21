@@ -62,11 +62,11 @@ export async function createSaleAction(data: CreateSaleInput): Promise<ActionRes
       });
       const nextInvoiceNumber = (lastSale?.invoiceNumber || 0) + 1;
 
-      const paymentType = {
+      const paymentType = ({
         card: PaymentType.CARD,
         split: PaymentType.SPLIT,
         cash: PaymentType.CASH,
-      }[data.paymentMethod] || PaymentType.CASH;
+      } as Record<string, PaymentType>)[data.paymentMethod] ?? PaymentType.CASH;
 
       // 3. إنشاء الفاتورة مع itemName
       const sale = await tx.sale.create({

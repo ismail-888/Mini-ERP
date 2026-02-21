@@ -10,17 +10,17 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { MoreHorizontal } from "lucide-react"
 
-interface ActionMenuProps {
-  row: any
-  onView?: (row: any) => void
-  onEdit?: (row: any) => void
+interface ActionMenuProps<T = unknown> {
+  row: T
+  onView?: (row: T) => void
+  onEdit?: (row: T) => void
   onDelete?: (id: string) => void | Promise<void>
   showView?: boolean
   showEdit?: boolean
   showDelete?: boolean
 }
 
-export function ActionMenu({
+export function ActionMenu<T extends { id?: string | number }>({
   row,
   onView,
   onEdit,
@@ -28,7 +28,7 @@ export function ActionMenu({
   showView = true,
   showEdit = true,
   showDelete = true,
-}: ActionMenuProps) {
+}: ActionMenuProps<T>) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -48,7 +48,7 @@ export function ActionMenu({
           </DropdownMenuItem>
         )}
         {showDelete && onDelete && (
-          <DropdownMenuItem onClick={() => onDelete(row.id)} className="text-destructive">
+          <DropdownMenuItem onClick={() => onDelete(String(row.id))} className="text-destructive">
             <Trash2 className="mr-2 h-4 w-4" /> Delete
           </DropdownMenuItem>
         )}

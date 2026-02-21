@@ -58,6 +58,7 @@ import {
   FormControl,
   FormMessage,
 } from "~/components/ui/form";
+import Image from "next/image";
 
 interface AddProductDialogProps {
   open: boolean;
@@ -491,10 +492,13 @@ export function AddProductDialog({
                 >
                   {imagePreview ? (
                     <div className="relative">
-                      <img
+                      <Image
                         src={imagePreview ?? "/placeholder.svg"}
                         alt="Product preview"
-                        className="h-32 w-32 rounded-lg object-cover"
+                        width={128}
+                        height={128}
+                        className="rounded-lg object-cover"
+                        unoptimized
                       />
                       <button
                         type="button"

@@ -44,22 +44,26 @@ export default function SuccessPage() {
   }, [id])
 
   // استخراج البيانات
-  const invoiceNumber = sale?.invoiceNumber || "N/A"
-  const totalUSD = sale?.totalUSD || 0
+  const invoiceNumber = (sale?.invoiceNumber ?? "N/A") as string
+  const totalUSD = ((sale?.totalUSD as number | undefined) ?? 0)
   
   // Calculate payments to determine exact change
-  const paidCash = sale?.paidCashUSD || 0
-  const paidCard = sale?.paidCardUSD || 0
-  const paidLBP_inUSD = (sale?.paidCashLBP || 0) / (sale?.exchangeRate || 1)
+  const paidCash = (sale?.paidCashUSD as number | undefined) ?? 0
+  const paidCard = (sale?.paidCardUSD as number | undefined) ?? 0
+  const paidLBP = (sale?.paidCashLBP as number | undefined) ?? 0
+  const exchangeRate = (sale?.exchangeRate as number | undefined) ?? 1
+  
+  const paidLBP_inUSD = paidLBP / exchangeRate
   const totalPaid = paidCash + paidCard + paidLBP_inUSD
   
   const changeUSD = Math.max(0, totalPaid - totalUSD)
   
-  const items = sale?.items?.map((i: any) => ({
+  const rawItems = (sale?.items ?? []) as any[];
+  const items = rawItems.map((i: any) => ({
     name: i.itemName,
     quantity: i.quantity,
     price: i.priceUSD
-  })) || []
+  }))
   
   const lowStockAlerts: string[] = [] // Low stock alerts are shown on checkout, not persisted here easily unless stored on sale
 
@@ -76,7 +80,7 @@ export default function SuccessPage() {
     const count = 200
     const defaults = { origin: { y: 0.7 }, zIndex: 1000 }
     function fire(particleRatio: number, opts: confetti.Options) {
-      confetti({ ...defaults, ...opts, particleCount: Math.floor(count * particleRatio) })
+      void confetti({ ...defaults, ...opts, particleCount: Math.floor(count * particleRatio) })
     }
     fire(0.25, { spread: 26, startVelocity: 55 })
     fire(0.2, { spread: 60 })
@@ -158,7 +162,8 @@ export default function SuccessPage() {
   }
 
   const handleWhatsAppReceipt = () => {
-    const itemsList = items.map((i: any) => `• ${i.name} (x${i.quantity})`).join("\n")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const itemsList = items.map((i: any) => `• ${i.name as string} (x${i.quantity as number})`).join("\n")
     const message = encodeURIComponent(
       `*🧾 فاتورة دفع رقم: #${invoiceNumber}*\n` +
       `--------------------------\n` +
@@ -231,14 +236,14 @@ export default function SuccessPage() {
                       <div key={idx} className="grid grid-cols-12 items-start text-sm group">
                         <div className="col-span-8 flex flex-col">
                           <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1">
-                            {item.name}
+                            {item.name as string}
                             {/* تمييز المنتج اليدوي بنقطة صغيرة إذا لم يكن له ID منتج حقيقي */}
                             {!item.productId && <span className="h-1 w-1 bg-slate-300 rounded-full" title="Manual Entry" />}
                           </span>
-                          <span className="text-[11px] text-slate-500 font-medium">{item.quantity} × {formatUSD(item.price)}</span>
+                          <span className="text-[11px] text-slate-500 font-medium">{item.quantity as number} × {formatUSD(item.price as number)}</span>
                         </div>
                         <div className="col-span-4 text-right font-black text-slate-950 dark:text-white">
-                          {formatUSD(item.price * item.quantity)}
+                          {formatUSD((item.price as number) * (item.quantity as number))}
                         </div>
                       </div>
                     ))}

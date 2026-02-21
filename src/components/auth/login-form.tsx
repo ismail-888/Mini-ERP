@@ -47,7 +47,7 @@ export function LoginForm() {
         if (data?.error) {
           setError(data.error);
         }
-      } catch (err) {
+      } catch (_err) {
         // إذا حدث Redirect، سيقوم Next.js بإلقاء خطأ داخلي، نتجاهله هنا
       }
     });

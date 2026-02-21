@@ -66,7 +66,7 @@ export function AddCategoryDialog({ open, onClose, onAdd, onEdit, category, isLo
         const result = await updateCategoryAction(category.id, values.name)
         if (result?.success) {
           toast.success("تم تحديث التصنيف")
-          onEdit?.(result.data)
+          onEdit?.(result.data as Category)
           handleClose()
         } else {
           toast.error(result?.error ?? "خطأ أثناء التحديث")
@@ -75,7 +75,7 @@ export function AddCategoryDialog({ open, onClose, onAdd, onEdit, category, isLo
         const result = await createCategoryAction(values.name)
         if (result?.success) {
           toast.success("تم إضافة التصنيف")
-          onAdd?.(result.data)
+          onAdd?.(result.data as Category)
           handleClose()
         } else {
           toast.error(result?.error ?? "خطأ أثناء الإنشاء")

@@ -103,10 +103,11 @@ export default function CheckoutPage() {
     try {
       const result = await createSaleAction(saleData);
 
-      if (result.success) {
+      if (result.success && result.data) {
         // معالجة تنبيهات المخزون المنخفض (إذا وجدت)
-        if (result.data.lowStockAlerts && result.data.lowStockAlerts.length > 0) {
-          result.data.lowStockAlerts.forEach((msg: string) => {
+        const alerts = (result.data as { lowStockAlerts?: string[] }).lowStockAlerts;
+        if (Array.isArray(alerts) && alerts.length > 0) {
+          alerts.forEach((msg: string) => {
             toast.warning(`تنبيه مخزون: ${msg}`, { duration: 5000 });
           });
         }
@@ -114,14 +115,14 @@ export default function CheckoutPage() {
 
         // الانتقال لصفحة النجاح أولاً
         router.push(
-          `/dashboard/pos/success?id=${result.data.id}`,
+          `/dashboard/pos/success?id=${(result.data as { id: string }).id}`,
         );
 
         // Clear cart AFTER navigation starts
         clearCart();
         // Don't reset isProcessing - let the component unmount with it still true
       } else {
-        toast.error(result.error || "حدث خطأ ما");
+        toast.error(result.error ?? "حدث خطأ ما");
         setIsProcessing(false);
       }
     } catch (error) {

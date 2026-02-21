@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CategoryTable } from '~/components/dashboard/category/category-table'
 import AddCategoryDialog from '~/components/dashboard/category/add-category-dialog'
@@ -80,7 +80,7 @@ export function CategoryClient({ initialCategories }: CategoryClientProps) {
           toast.success('Category deleted successfully')
           router.refresh()
         } else {
-          toast.error(result.error || 'Failed to delete category')
+          toast.error(result.error ?? 'Failed to delete category')
         }
       } else {
         const result = await bulkDeleteCategoriesAction(deletingIds)
@@ -88,7 +88,7 @@ export function CategoryClient({ initialCategories }: CategoryClientProps) {
           toast.success(`${deletingIds.length} categories deleted successfully`)
           router.refresh()
         } else {
-          toast.error(result.error || 'Failed to delete categories')
+          toast.error(result.error ?? 'Failed to delete categories')
         }
       }
     } catch (err) {

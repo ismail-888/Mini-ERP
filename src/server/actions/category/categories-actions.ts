@@ -22,7 +22,7 @@ export async function getCategoriesAction(): Promise<ActionResponse<any[]>> {
       orderBy: { name: "asc" }
     });
     return { success: true, data: categories };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في جلب التصنيفات" };
   }
 }
@@ -38,7 +38,7 @@ export async function getCategoryByIdAction(id: string): Promise<ActionResponse<
     });
     if (!category) return { success: false, error: "التصنيف غير موجود" };
     return { success: true, data: category };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "حدث خطأ أثناء جلب البيانات" };
   }
 }
@@ -79,7 +79,7 @@ export async function updateCategoryAction(id: string, name: string): Promise<Ac
     revalidatePath("/dashboard/inventory");
     revalidatePath("/dashboard/category");
     return { success: true, data: updated };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في تحديث التصنيف" };
   }
 }
@@ -96,7 +96,7 @@ export async function deleteCategoryAction(id: string): Promise<ActionResponse<n
     revalidatePath("/dashboard/inventory");
     revalidatePath("/dashboard/category");
     return { success: true, data: null };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في حذف التصنيف. تأكد من عدم ارتباطه بمنتجات." };
   }
 }
@@ -116,7 +116,7 @@ export async function bulkDeleteCategoriesAction(ids: string[]): Promise<ActionR
     revalidatePath("/dashboard/inventory");
     revalidatePath("/dashboard/category");
     return { success: true, data: null };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "فشل في حذف بعض التصنيفات" };
   }
 }

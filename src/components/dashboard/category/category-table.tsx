@@ -65,7 +65,7 @@ export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteCli
         const date = new Date(row.original.createdAt)
         return <span className="text-sm text-muted-foreground">{format(date, 'yyyy-MM-dd')}</span>
       },
-      filterFn: (row, columnId, filterValue) => {
+      filterFn: (row, columnId, filterValue: string) => {
         if (!filterValue) return true
         const rowDate = format(new Date(row.original.createdAt), 'yyyy-MM-dd')
         const filterDate = format(new Date(filterValue), 'yyyy-MM-dd')
@@ -81,7 +81,7 @@ export function CategoryTable({ categories, onAddClick, onEditClick, onDeleteCli
         const date = new Date(row.original.updatedAt)
         return <span className="text-sm text-muted-foreground">{format(date, 'yyyy-MM-dd')}</span>
       },
-      filterFn: (row, columnId, filterValue) => {
+      filterFn: (row, columnId, filterValue: string) => {
         if (!filterValue) return true
         const rowDate = format(new Date(row.original.updatedAt), 'yyyy-MM-dd')
         const filterDate = format(new Date(filterValue), 'yyyy-MM-dd')

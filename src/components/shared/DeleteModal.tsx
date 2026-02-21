@@ -63,7 +63,7 @@ export function DeleteModal({
             <DialogTitle>{title}</DialogTitle>
           </div>
           <DialogDescription className="mt-2">
-            {description || defaultDescription}
+            {description ?? defaultDescription ?? ''}
           </DialogDescription>
         </DialogHeader>
 
