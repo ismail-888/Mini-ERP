@@ -3,8 +3,13 @@ import { useState } from "react";
 import { MarketingButton } from "./MarketingButton";
 import { Menu, X } from "lucide-react";
 import { Link } from "~/i18n/routing"; // استيراد الـ Link الذكي الخاص بمشروعك
+import type { User } from "next-auth";
 
-const Navbar = () => {
+interface NavbarProps {
+  user?: User;
+}
+
+const Navbar = ({ user }: NavbarProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
@@ -43,13 +48,21 @@ const Navbar = () => {
 
           {/* CTA Buttons - الأزرار الآن تعمل */}
           <div className="hidden md:flex items-center gap-3">
-            <MarketingButton variant="ghost" size="sm" asChild>
-              <Link href="/login">Login</Link>
-            </MarketingButton>
-            
-            <MarketingButton variant="emerald" size="sm" asChild>
-              <Link href="/register">Start Free Trial</Link>
-            </MarketingButton>
+            {user ? (
+              <MarketingButton variant="emerald" size="sm" asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </MarketingButton>
+            ) : (
+              <>
+                <MarketingButton variant="ghost" size="sm" asChild>
+                  <Link href="/login">Login</Link>
+                </MarketingButton>
+                
+                <MarketingButton variant="emerald" size="sm" asChild>
+                  <Link href="/register">Start Free Trial</Link>
+                </MarketingButton>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -77,13 +90,21 @@ const Navbar = () => {
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
                 {/* روابط الموبايل */}
-                <MarketingButton variant="ghost" className="w-full justify-center" asChild>
-                  <Link href="/login" onClick={() => setIsOpen(false)}>Login</Link>
-                </MarketingButton>
-                
-                <MarketingButton variant="emerald" className="w-full justify-center" asChild>
-                  <Link href="/register" onClick={() => setIsOpen(false)}>Start Free Trial</Link>
-                </MarketingButton>
+                {user ? (
+                  <MarketingButton variant="emerald" className="w-full justify-center" asChild>
+                    <Link href="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
+                  </MarketingButton>
+                ) : (
+                  <>
+                    <MarketingButton variant="ghost" className="w-full justify-center" asChild>
+                      <Link href="/login" onClick={() => setIsOpen(false)}>Login</Link>
+                    </MarketingButton>
+                    
+                    <MarketingButton variant="emerald" className="w-full justify-center" asChild>
+                      <Link href="/register" onClick={() => setIsOpen(false)}>Start Free Trial</Link>
+                    </MarketingButton>
+                  </>
+                )}
               </div>
             </div>
           </div>

@@ -24,6 +24,11 @@ export default auth((req) => {
   if (isDashboardRoute && !isLoggedIn) {
     return Response.redirect(new URL(`/${locale}/login`, nextUrl));
   }
+  
+  // --- 2.5. منع الأدمن من دخول لوحة تحكم العملاء ---
+  if (isDashboardRoute && user?.role === "ADMIN") {
+     return Response.redirect(new URL(`/${locale}/admin`, nextUrl));
+  }
 
   // --- 3. منطق انتهاء الاشتراك وفترة السماح (للتاجر فقط) ---
   if (isDashboardRoute && user?.role === "MERCHANT" && !isUpgradePage) {
