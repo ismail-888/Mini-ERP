@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { ProductTable } from "~/components/dashboard/inventory/product-table";
@@ -29,8 +30,10 @@ export default function InventoryClient({
   categories,
   brands,
 }: InventoryClientProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  // Use props directly instead of duplicating state
+  const products = initialProducts;
   const [loading, setLoading] = useState(false);
 
   const [addProductOpen, setAddProductOpen] = useState(false);
@@ -90,7 +93,7 @@ export default function InventoryClient({
   });
 
   const handleAddProduct = (newProduct: Product) => {
-    setProducts((prev) => [newProduct, ...prev]);
+    router.refresh();
     setAddProductOpen(false);
   };
 
@@ -119,9 +122,7 @@ export default function InventoryClient({
   };
 
   const handleEditProduct = (updatedProduct: Product) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p)),
-    );
+    router.refresh();
     setEditingProduct(null);
   };
 
@@ -137,9 +138,10 @@ export default function InventoryClient({
     if (!deleteProductId) return;
 
     try {
+      setLoading(true);
       const result = await deleteProductAction(deleteProductId);
       if (result.success) {
-        setProducts((prev) => prev.filter((p) => p.id !== deleteProductId));
+        router.refresh();
         toast.success("Product deleted successfully");
       } else {
         toast.error(result.error || "Failed to delete product");
@@ -147,6 +149,9 @@ export default function InventoryClient({
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Failed to delete product");
+    } finally {
+      setLoading(false);
+      setDeleteModalOpen(false);
     }
   };
 
@@ -165,11 +170,10 @@ export default function InventoryClient({
     if (deleteBulkIds.length === 0) return;
 
     try {
+      setLoading(true);
       const result = await bulkDeleteProductsAction(deleteBulkIds);
       if (result.success) {
-        setProducts((prev) =>
-          prev.filter((p) => !deleteBulkIds.includes(p.id)),
-        );
+        router.refresh();
         toast.success(`${deleteBulkIds.length} products deleted successfully`);
       } else {
         toast.error(result.error || "Failed to delete products");
@@ -177,6 +181,9 @@ export default function InventoryClient({
     } catch (error) {
       console.error("Bulk delete error:", error);
       toast.error("Failed to delete products");
+    } finally {
+      setLoading(false);
+      setDeleteModalOpen(false);
     }
   };
 

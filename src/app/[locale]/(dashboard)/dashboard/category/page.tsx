@@ -1,12 +1,14 @@
-'use server'
-
 import React from 'react'
 import { CategoryClient } from '~/components/dashboard/category/category-client'
+import { getCategoriesAction } from '~/server/actions/category/categories-actions'
 
-function CategoryPage() {
+async function CategoryPage() {
+  const result = await getCategoriesAction()
+  const categories = result.success ? result.data || [] : []
+
   return (
     <div>
-      <CategoryClient />
+      <CategoryClient initialCategories={categories} />
     </div>
   )
 }

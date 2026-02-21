@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { CategoryTable } from '~/components/dashboard/category/category-table'
 import AddCategoryDialog from '~/components/dashboard/category/add-category-dialog'
 import { DeleteModal } from '~/components/shared/DeleteModal'
-import { getCategoriesAction, deleteCategoryAction, bulkDeleteCategoriesAction } from '~/server/actions/category/categories-actions'
+import { deleteCategoryAction, bulkDeleteCategoriesAction } from '~/server/actions/category/categories-actions'
 import { toast } from 'sonner'
 
 interface Category {
@@ -17,36 +18,24 @@ interface Category {
   }
 }
 
-export function CategoryClient() {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
+interface CategoryClientProps {
+  initialCategories: Category[]
+}
+
+export function CategoryClient({ initialCategories }: CategoryClientProps) {
+  const router = useRouter()
+  // We use the prop directly as the source of truth when using router.refresh()
+  // But if we want optimistic updates or simple state management, we can sync state.
+  // For simplicity and to rely on server data:
+  const categories = initialCategories
+  
+  const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deletingIds, setDeletingIds] = useState<string[] | null>(null)
   const [deletingName, setDeletingName] = useState<string | undefined>(undefined)
   const [deletingCount, setDeletingCount] = useState<number>(1)
-
-  // Fetch categories on mount
-  useEffect(() => {
-    fetchCategories()
-  }, [])
-
-  const fetchCategories = async () => {
-    try {
-      setLoading(true)
-      const result = await getCategoriesAction()
-      if (result.success) {
-        setCategories(result.data || [])
-      } else {
-        toast.error(result.error || 'Failed to fetch categories')
-      }
-    } catch (error) {
-      toast.error('Error fetching categories')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleAddClick = () => {
     setEditingCategory(undefined)
@@ -82,12 +71,14 @@ export function CategoryClient() {
     if (!deletingIds || deletingIds.length === 0) return
 
     try {
+      setLoading(true)
       if (deletingIds.length === 1) {
         const categoryId = deletingIds[0]
         if (!categoryId) return
         const result = await deleteCategoryAction(categoryId)
         if (result.success) {
           toast.success('Category deleted successfully')
+          router.refresh()
         } else {
           toast.error(result.error || 'Failed to delete category')
         }
@@ -95,15 +86,16 @@ export function CategoryClient() {
         const result = await bulkDeleteCategoriesAction(deletingIds)
         if (result.success) {
           toast.success(`${deletingIds.length} categories deleted successfully`)
+          router.refresh()
         } else {
           toast.error(result.error || 'Failed to delete categories')
         }
       }
-      await fetchCategories()
     } catch (err) {
       console.error('Delete error', err)
       toast.error('Error deleting categories')
     } finally {
+      setLoading(false)
       setDeleteModalOpen(false)
       setDeletingIds(null)
       setDeletingName(undefined)
@@ -129,13 +121,11 @@ export function CategoryClient() {
         category={editingCategory}
         mode={editingCategory ? "edit" : "add"}
         onAdd={async () => {
-          // refresh list after add
-          await fetchCategories()
+          router.refresh()
           setDialogOpen(false)
         }}
         onEdit={async () => {
-          // refresh list after edit
-          await fetchCategories()
+          router.refresh()
           setDialogOpen(false)
         }}
       />

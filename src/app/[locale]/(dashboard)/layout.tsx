@@ -1,10 +1,10 @@
 // src/app/[locale]/(dashboard)/layout.tsx
 
 import { auth } from "~/server/auth";
-import { db } from "~/server/db"; 
 import { AppShell } from "~/components/dashboard/app-shell";
 import { redirect } from "next/navigation";
 import { SubscriptionAlert } from "~/components/dashboard/subscription-alert";
+import { getLatestExchangeRateAction } from "~/server/actions/exchange-rate";
 
 export default async function DashboardLayout({ 
   children,
@@ -22,26 +22,9 @@ export default async function DashboardLayout({
   }
 
   // 2. جلب أحدث سعر صرف (منطق الأولويات)
-
-  // أولاً: محاولة جلب السعر الخاص بالتاجر الحالي
-  let latestRateEntry = await db.exchangeRate.findFirst({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  // ثانياً: إذا لم يوجد سعر خاص بالتاجر (null)، قم بجلب أحدث سعر وضعه الأدمن
-  // المعامل ??= يُسمى "Nullish Coalescing Assignment". ببساطة، هو طريقة مختصرة وذكية لقول: "إذا كان هذا المتغير فارغاً، أعطه هذه القيمة؛ أما إذا كان لديه قيمة فعلاً، فاتركه كما هو".
-  latestRateEntry ??= await db.exchangeRate.findFirst({
-    where: { 
-      user: { 
-        role: "ADMIN" 
-      } 
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  // القيمة النهائية: السعر المستخرج من الداتابيز أو القيمة الافتراضية 89000 في حال عدم وجود أي سجل
-  const currentRate = latestRateEntry?.rate ?? 89000;
+  // تم نقل منطق جلب السعر إلى ملف actions مستقل لزيادة الترتيب وإعادة الاستخدام
+  // لا تقلق، هذا لا يؤثر على الأداء لأن الكود لا يزال يعمل على السيرفر (Server Component)
+  const currentRate = await getLatestExchangeRateAction();
 
   return (
     <div className="flex flex-col min-h-screen">

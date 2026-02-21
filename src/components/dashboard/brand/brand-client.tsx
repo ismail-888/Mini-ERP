@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { DeleteModal } from '~/components/shared/DeleteModal'
 
 import { toast } from 'sonner'
-import { bulkDeleteBrandsAction, deleteBrandAction, getBrandsAction } from '~/server/actions/brand/brands-actions'
+import { bulkDeleteBrandsAction, deleteBrandAction } from '~/server/actions/brand/brands-actions'
 import { BrandTable } from './brand-table'
 import AddBrandDialog from './add-brand-dialog'
 
@@ -19,36 +20,22 @@ interface Brand {
   }
 }
 
-export function BrandClient() {
-  const [brands, setBrands] = useState<Brand[]>([])
-  const [loading, setLoading] = useState(true)
+interface BrandClientProps {
+  initialBrands: Brand[]
+}
+
+export function BrandClient({ initialBrands }: BrandClientProps) {
+  const router = useRouter()
+  // Use props as the source of truth
+  const brands = initialBrands
+
+  const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingBrand, setEditingBrand] = useState<Brand | undefined>(undefined)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deletingIds, setDeletingIds] = useState<string[] | null>(null)
   const [deletingName, setDeletingName] = useState<string | undefined>(undefined)
   const [deletingCount, setDeletingCount] = useState<number>(1)
-
-  // Fetch brands on mount
-  useEffect(() => {
-    fetchBrands()
-  }, [])
-
-  const fetchBrands = async () => {
-    try {
-      setLoading(true)
-      const result = await getBrandsAction()
-      if (result.success) {
-        setBrands(result.data || [])
-      } else {
-        toast.error(result.error || 'Failed to fetch brands')
-      }
-    } catch (error) {
-      toast.error('Error fetching brands')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleAddClick = () => {
     setEditingBrand(undefined)
@@ -84,12 +71,14 @@ export function BrandClient() {
     if (!deletingIds || deletingIds.length === 0) return
 
     try {
+      setLoading(true)
       if (deletingIds.length === 1) {
         const brandId = deletingIds[0]
         if (!brandId) return
         const result = await deleteBrandAction(brandId)
         if (result.success) {
           toast.success('Brand deleted successfully')
+          router.refresh()
         } else {
           toast.error(result.error || 'Failed to delete brand')
         }
@@ -97,15 +86,16 @@ export function BrandClient() {
         const result = await bulkDeleteBrandsAction(deletingIds)
         if (result.success) {
           toast.success(`${deletingIds.length} brands deleted successfully`)
+          router.refresh()
         } else {
           toast.error(result.error || 'Failed to delete brands')
         }
       }
-      await fetchBrands()
     } catch (err) {
       console.error('Delete error', err)
       toast.error('Error deleting brands')
     } finally {
+      setLoading(false)
       setDeleteModalOpen(false)
       setDeletingIds(null)
       setDeletingName(undefined)
@@ -131,13 +121,11 @@ export function BrandClient() {
         brand={editingBrand}
         mode={editingBrand ? "edit" : "add"}
         onAdd={async () => {
-          // refresh list after add
-          await fetchBrands()
+          router.refresh()
           setDialogOpen(false)
         }}
         onEdit={async () => {
-          // refresh list after edit
-          await fetchBrands()
+          router.refresh()
           setDialogOpen(false)
         }}
       />
@@ -153,6 +141,7 @@ export function BrandClient() {
         title="Delete Brand"
         itemName={deletingName}
       />
+
 
       <DeleteModal
         open={deleteModalOpen && !!deletingIds && deletingIds.length > 1}
